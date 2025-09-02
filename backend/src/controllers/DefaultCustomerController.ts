@@ -14,6 +14,12 @@ export class DefaultCustomerController {
     try {
       const params = req.query as any;
       
+      // 应用数据级别权限控制
+      const dataAccess = req.checkDataAccess;
+      if (dataAccess) {
+        params.dataAccess = dataAccess;
+      }
+      
       const result = await this.customerService.getDefaultCustomers(params);
       
       return ResponseUtil.success(res, result, '查询成功');
@@ -59,10 +65,12 @@ export class DefaultCustomerController {
         return ResponseUtil.badRequest(res, '无效的客户ID');
       }
 
-      const customer = await this.customerService.getDefaultCustomerByCustomerId(customerId);
+      // 应用数据级别权限控制
+      const dataAccess = req.checkDataAccess;
+      const customer = await this.customerService.getDefaultCustomerByCustomerId(customerId, dataAccess);
       
       if (!customer) {
-        return ResponseUtil.notFound(res, '违约客户不存在');
+        return ResponseUtil.notFound(res, '违约客户不存在或无权限访问');
       }
 
       return ResponseUtil.success(res, customer, '查询成功');

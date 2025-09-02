@@ -23,7 +23,7 @@ import {
 } from '../utils/validation';
 
 // Middleware
-import { authenticateToken, requireRole } from '../middleware/auth';
+import { authenticateToken, requireRole, requireDataAccess } from '../middleware/auth';
 
 const router = Router();
 
@@ -89,19 +89,21 @@ const initializeRoutes = (prisma: PrismaClient) => {
   // ==================== 违约认定申请路由 ====================
   router.post('/default-applications',
     authenticateToken,
-    requireRole(['ADMIN', 'OPERATOR']),
+    requireRole(['ADMIN', 'OPERATOR']), // 只有管理员和操作员可以提交申请
     validate(defaultApplicationValidation.create),
     defaultApplicationController.createApplication,
   );
   
   router.get('/default-applications',
     authenticateToken,
+    requireDataAccess(true), // 需要检查数据访问权限
     validateQuery(defaultApplicationValidation.query),
     defaultApplicationController.getApplications,
   );
   
   router.get('/default-applications/:applicationId',
     authenticateToken,
+    requireDataAccess(true), // 需要检查数据访问权限
     defaultApplicationController.getApplicationDetail,
   );
   
@@ -122,22 +124,26 @@ const initializeRoutes = (prisma: PrismaClient) => {
   // ==================== 违约客户查询路由 ====================
   router.get('/default-customers',
     authenticateToken,
+    requireDataAccess(false), // 所有角色都可查看，但可能有数据范围限制
     defaultCustomerController.getDefaultCustomers,
   );
   
   router.get('/default-customers/export',
     authenticateToken,
-    requireRole(['ADMIN', 'AUDITOR', 'OPERATOR']),
+    requireRole(['ADMIN', 'AUDITOR', 'OPERATOR']), // 所有角色都可导出
+    requireDataAccess(false),
     defaultCustomerController.exportDefaultCustomers,
   );
   
   router.get('/default-customers/renewable',
     authenticateToken,
+    requireRole(['ADMIN', 'OPERATOR']), // 只有管理员和操作员可以查看可续期客户
     defaultCustomerController.getRenewableCustomers,
   );
   
   router.get('/default-customers/:customerId',
     authenticateToken,
+    requireDataAccess(true), // 需要检查是否有权限查看特定客户
     defaultCustomerController.getDefaultCustomerByCustomerId,
   );
 

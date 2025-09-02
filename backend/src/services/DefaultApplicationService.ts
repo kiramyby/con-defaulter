@@ -103,8 +103,8 @@ export class DefaultApplicationService {
   /**
    * 查询违约认定申请列表
    */
-  async getApplications(params: ApplicationQueryParams): Promise<PaginatedResponse<DefaultApplicationDto>> {
-    const { page = 1, size = 10, status, customerName, applicant, severity, startTime, endTime } = params;
+  async getApplications(params: ApplicationQueryParams & { dataAccess?: any }): Promise<PaginatedResponse<DefaultApplicationDto>> {
+    const { page = 1, size = 10, status, customerName, applicant, severity, startTime, endTime, dataAccess } = params;
     const skip = (page - 1) * size;
 
     const where: any = {};
@@ -117,6 +117,16 @@ export class DefaultApplicationService {
       where.createTime = {};
       if (startTime) where.createTime.gte = new Date(startTime);
       if (endTime) where.createTime.lte = new Date(endTime);
+    }
+
+    // 应用数据级别权限控制
+    if (dataAccess && dataAccess.checkOwnership) {
+      if (dataAccess.role === 'OPERATOR') {
+        // 操作员只能查看自己提交的申请
+        where.applicant = dataAccess.username;
+      }
+      // AUDITOR 可以查看所有申请，但不能修改
+      // ADMIN 可以查看和操作所有申请
     }
 
     const [total, applications] = await Promise.all([
@@ -157,9 +167,19 @@ export class DefaultApplicationService {
   /**
    * 获取违约认定申请详情
    */
-  async getApplicationDetail(applicationId: string): Promise<DefaultApplicationDetailDto | null> {
-    const application = await this.prisma.defaultApplication.findUnique({
-      where: { applicationId },
+  async getApplicationDetail(applicationId: string, dataAccess?: any): Promise<DefaultApplicationDetailDto | null> {
+    const where: any = { applicationId };
+    
+    // 应用数据级别权限控制
+    if (dataAccess && dataAccess.checkOwnership) {
+      if (dataAccess.role === 'OPERATOR') {
+        // 操作员只能查看自己提交的申请
+        where.applicant = dataAccess.username;
+      }
+    }
+
+    const application = await this.prisma.defaultApplication.findFirst({
+      where,
       include: {
         defaultReasons: {
           include: { defaultReason: true },

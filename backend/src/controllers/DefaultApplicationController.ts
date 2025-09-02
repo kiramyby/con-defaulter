@@ -32,6 +32,12 @@ export class DefaultApplicationController {
     try {
       const params = req.query as any;
       
+      // 应用数据级别权限控制
+      const dataAccess = req.checkDataAccess;
+      if (dataAccess) {
+        params.dataAccess = dataAccess;
+      }
+      
       const result = await this.applicationService.getApplications(params);
       
       return ResponseUtil.success(res, result, '查询成功');
@@ -49,10 +55,12 @@ export class DefaultApplicationController {
     try {
       const { applicationId } = req.params;
       
-      const application = await this.applicationService.getApplicationDetail(applicationId);
+      // 应用数据级别权限控制
+      const dataAccess = req.checkDataAccess;
+      const application = await this.applicationService.getApplicationDetail(applicationId, dataAccess);
       
       if (!application) {
-        return ResponseUtil.notFound(res, '申请不存在');
+        return ResponseUtil.notFound(res, '申请不存在或无权限访问');
       }
 
       return ResponseUtil.success(res, application, '查询成功');

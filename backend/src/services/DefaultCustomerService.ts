@@ -12,8 +12,8 @@ export class DefaultCustomerService {
   /**
    * 查询违约客户列表
    */
-  async getDefaultCustomers(params: DefaultCustomerQueryParams): Promise<PaginatedResponse<DefaultCustomerDto>> {
-    const { page = 1, size = 10, customerName, severity, startTime, endTime } = params;
+  async getDefaultCustomers(params: DefaultCustomerQueryParams & { dataAccess?: any }): Promise<PaginatedResponse<DefaultCustomerDto>> {
+    const { page = 1, size = 10, customerName, severity, startTime, endTime, dataAccess } = params;
     const skip = (page - 1) * size;
 
     const where: any = {
@@ -26,6 +26,14 @@ export class DefaultCustomerService {
       where.applicationTime = {};
       if (startTime) where.applicationTime.gte = new Date(startTime);
       if (endTime) where.applicationTime.lte = new Date(endTime);
+    }
+
+    // 应用数据级别权限控制
+    if (dataAccess && dataAccess.checkOwnership) {
+      if (dataAccess.role === 'OPERATOR') {
+        // 操作员只能查看自己申请的违约客户
+        where.applicant = dataAccess.username;
+      }
     }
 
     const [total, customers] = await Promise.all([
@@ -118,12 +126,22 @@ export class DefaultCustomerService {
   /**
    * 根据客户ID获取违约详情
    */
-  async getDefaultCustomerByCustomerId(customerId: number): Promise<DefaultCustomerDto | null> {
+  async getDefaultCustomerByCustomerId(customerId: number, dataAccess?: any): Promise<DefaultCustomerDto | null> {
+    const where: any = {
+      customerId: BigInt(customerId),
+      isActive: true,
+    };
+
+    // 应用数据级别权限控制
+    if (dataAccess && dataAccess.checkOwnership) {
+      if (dataAccess.role === 'OPERATOR') {
+        // 操作员只能查看自己申请的违约客户
+        where.applicant = dataAccess.username;
+      }
+    }
+
     const customer = await this.prisma.defaultCustomer.findFirst({
-      where: {
-        customerId: BigInt(customerId),
-        isActive: true,
-      },
+      where,
       include: {
         defaultReasons: {
           include: { defaultReason: true },
