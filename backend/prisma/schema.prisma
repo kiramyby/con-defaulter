@@ -1,0 +1,244 @@
+// Prisma schema for Supabase PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model DefaultReason {
+  id        BigInt   @id @default(autoincrement())
+  reason    String   @db.VarChar(255)
+  detail    String
+  enabled   Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createTime DateTime @default(now()) @map("create_time") @db.Timestamptz
+  updateTime DateTime @default(now()) @updatedAt @map("update_time") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.VarChar(100)
+  updatedBy String?  @map("updated_by") @db.VarChar(100)
+
+  // Relations
+  applicationReasons ApplicationDefaultReason[]
+  customerReasons    DefaultCustomerReason[]
+
+  @@map("default_reasons")
+}
+
+model Customer {
+  id                     BigInt   @id @default(autoincrement())
+  customerCode           String   @unique @map("customer_code") @db.VarChar(50)
+  customerName           String   @map("customer_name") @db.VarChar(255)
+  industry               String?  @db.VarChar(100)
+  region                 String?  @db.VarChar(100)
+  latestExternalRating   String?  @map("latest_external_rating") @db.VarChar(10)
+  status                 CustomerStatus @default(NORMAL)
+  createTime             DateTime @default(now()) @map("create_time") @db.Timestamptz
+  updateTime             DateTime @default(now()) @updatedAt @map("update_time") @db.Timestamptz
+
+  // Relations
+  applications       DefaultApplication[]
+  defaultCustomers   DefaultCustomer[]
+  renewals           Renewal[]
+
+  @@map("customers")
+}
+
+model DefaultApplication {
+  id                     BigInt           @id @default(autoincrement())
+  applicationId          String           @unique @map("application_id") @db.VarChar(50)
+  customerId             BigInt           @map("customer_id")
+  customerName           String           @map("customer_name") @db.VarChar(255)
+  latestExternalRating   String?          @map("latest_external_rating") @db.VarChar(10)
+  severity               Severity
+  status                 ApplicationStatus @default(PENDING)
+  remark                 String?
+  applicant              String           @db.VarChar(100)
+  createTime             DateTime         @default(now()) @map("create_time") @db.Timestamptz
+  approver               String?          @db.VarChar(100)
+  approveTime            DateTime?        @map("approve_time") @db.Timestamptz
+  approveRemark          String?          @map("approve_remark")
+
+  // Relations
+  customer               Customer         @relation(fields: [customerId], references: [id])
+  defaultReasons         ApplicationDefaultReason[]
+  defaultCustomers       DefaultCustomer[]
+
+  @@map("default_applications")
+}
+
+model ApplicationDefaultReason {
+  id              BigInt   @id @default(autoincrement())
+  applicationId   BigInt   @map("application_id")
+  defaultReasonId BigInt   @map("default_reason_id")
+  createTime      DateTime @default(now()) @map("create_time") @db.Timestamptz
+
+  // Relations
+  application     DefaultApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  defaultReason   DefaultReason      @relation(fields: [defaultReasonId], references: [id])
+
+  @@unique([applicationId, defaultReasonId])
+  @@map("application_default_reasons")
+}
+
+model Attachment {
+  id           BigInt         @id @default(autoincrement())
+  fileId       String         @unique @map("file_id") @db.VarChar(50)
+  fileName     String         @map("file_name") @db.VarChar(255)
+  fileUrl      String         @map("file_url") @db.VarChar(500)
+  fileSize     BigInt         @map("file_size")
+  fileType     String?        @map("file_type") @db.VarChar(50)
+  businessType BusinessType?  @map("business_type")
+  businessId   BigInt?        @map("business_id")
+  uploadTime   DateTime       @default(now()) @map("upload_time") @db.Timestamptz
+  uploadedBy   String?        @map("uploaded_by") @db.VarChar(100)
+
+  @@map("attachments")
+}
+
+model DefaultCustomer {
+  id                     BigInt    @id @default(autoincrement())
+  customerId             BigInt    @map("customer_id")
+  applicationId          BigInt    @map("application_id")
+  customerName           String    @map("customer_name") @db.VarChar(255)
+  severity               Severity
+  applicant              String    @db.VarChar(100)
+  applicationTime        DateTime  @map("application_time") @db.Timestamptz
+  approver               String    @db.VarChar(100)
+  approveTime            DateTime  @map("approve_time") @db.Timestamptz
+  latestExternalRating   String?   @map("latest_external_rating") @db.VarChar(10)
+  isActive               Boolean   @default(true) @map("is_active")
+  createTime             DateTime  @default(now()) @map("create_time") @db.Timestamptz
+
+  // Relations
+  customer               Customer  @relation(fields: [customerId], references: [id])
+  application            DefaultApplication @relation(fields: [applicationId], references: [id])
+  defaultReasons         DefaultCustomerReason[]
+
+  @@map("default_customers")
+}
+
+model DefaultCustomerReason {
+  id               BigInt   @id @default(autoincrement())
+  defaultCustomerId BigInt  @map("default_customer_id")
+  defaultReasonId  BigInt   @map("default_reason_id")
+  createTime       DateTime @default(now()) @map("create_time") @db.Timestamptz
+
+  // Relations
+  defaultCustomer  DefaultCustomer @relation(fields: [defaultCustomerId], references: [id], onDelete: Cascade)
+  defaultReason    DefaultReason   @relation(fields: [defaultReasonId], references: [id])
+
+  @@unique([defaultCustomerId, defaultReasonId])
+  @@map("default_customer_reasons")
+}
+
+model RenewalReason {
+  id        BigInt   @id @default(autoincrement())
+  reason    String   @db.VarChar(255)
+  enabled   Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createTime DateTime @default(now()) @map("create_time") @db.Timestamptz
+  updateTime DateTime @default(now()) @updatedAt @map("update_time") @db.Timestamptz
+
+  // Relations
+  renewals  Renewal[]
+
+  @@map("renewal_reasons")
+}
+
+model Renewal {
+  id              BigInt        @id @default(autoincrement())
+  renewalId       String        @unique @map("renewal_id") @db.VarChar(50)
+  customerId      BigInt        @map("customer_id")
+  customerName    String        @map("customer_name") @db.VarChar(255)
+  renewalReasonId BigInt        @map("renewal_reason_id")
+  status          RenewalStatus @default(PENDING)
+  remark          String?
+  applicant       String        @db.VarChar(100)
+  createTime      DateTime      @default(now()) @map("create_time") @db.Timestamptz
+  approver        String?       @db.VarChar(100)
+  approveTime     DateTime?     @map("approve_time") @db.Timestamptz
+  approveRemark   String?       @map("approve_remark")
+
+  // Relations
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  renewalReason   RenewalReason @relation(fields: [renewalReasonId], references: [id])
+
+  @@map("renewals")
+}
+
+model User {
+  id         BigInt     @id @default(autoincrement())
+  username   String     @unique @db.VarChar(50)
+  realName   String     @map("real_name") @db.VarChar(100)
+  email      String?    @db.VarChar(100)
+  phone      String?    @db.VarChar(20)
+  department String?    @db.VarChar(100)
+  role       UserRole
+  status     UserStatus @default(ACTIVE)
+  createTime DateTime   @default(now()) @map("create_time") @db.Timestamptz
+  updateTime DateTime   @default(now()) @updatedAt @map("update_time") @db.Timestamptz
+
+  @@map("users")
+}
+
+model OperationLog {
+  id           BigInt    @id @default(autoincrement())
+  userId       BigInt?   @map("user_id")
+  username     String?   @db.VarChar(50)
+  operationType String   @map("operation_type") @db.VarChar(50)
+  businessType String?   @map("business_type") @db.VarChar(50)
+  businessId   BigInt?   @map("business_id")
+  operationDesc String?  @map("operation_desc")
+  requestData  Json?     @map("request_data")
+  responseData Json?     @map("response_data")
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  userAgent    String?   @map("user_agent") @db.VarChar(500)
+  operationTime DateTime @default(now()) @map("operation_time") @db.Timestamptz
+
+  @@map("operation_logs")
+}
+
+// Enums
+enum CustomerStatus {
+  NORMAL
+  DEFAULT
+  RENEWAL
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BusinessType {
+  DEFAULT_APPLICATION
+  RENEWAL_APPLICATION
+}
+
+enum RenewalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+  AUDITOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
