@@ -5,15 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BarChart3, Users, AlertTriangle, CheckCircle, FileText, Building2 } from "lucide-react"
+import { BarChart3, Users, AlertTriangle, CheckCircle, FileText, Building2, LogOut } from "lucide-react"
 import { DefaultReasonsManagement } from "@/components/default-reasons-management"
 import { DefaultApplicationsManagement } from "@/components/default-applications-management"
 import { RenewalManagement } from "@/components/renewal-management"
 import { StatisticsAnalysis } from "@/components/statistics-analysis"
 import { Toaster } from "@/components/ui/toaster"
+import { useAuth } from "@/lib/auth-context"
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("overview")
+  const [activeTab, setActiveTab] = useState("overview");
+  // 添加子标签状态管理
+  const [defaultApplicationsSubTab, setDefaultApplicationsSubTab] = useState("");
+  const { logout } = useAuth();
 
   // Mock data for dashboard
   const stats = {
@@ -106,14 +110,18 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm">
-                <FileText className="h-4 w-4 mr-2" />
-                导出报告
-              </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={() => {
+                setActiveTab("applications");
+                // 同时设置子标签状态
+                setDefaultApplicationsSubTab("submit");
+              }}>
                 <Users className="h-4 w-4 mr-2" />
                 新增申请
               </Button>
+              <Button variant="outline" size="sm" onClick={logout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                  登出
+            </Button>
             </div>
           </div>
         </div>
@@ -247,7 +255,11 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="applications">
-            <DefaultApplicationsManagement />
+            {/* 传递子标签状态和回调函数 */}
+            <DefaultApplicationsManagement 
+              activeTab={defaultApplicationsSubTab} 
+              onTabChange={setDefaultApplicationsSubTab} 
+            />
           </TabsContent>
 
           <TabsContent value="renewals">

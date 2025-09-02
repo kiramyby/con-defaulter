@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, RefreshCw, Eye, CheckCircle, XCircle, Upload, FileText } from "lucide-react"
 import { mockApi, type DefaultApplication, type DefaultReason } from "@/lib/mock-api"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth-context"
 
 interface DefaultApplicationsListResponse {
   total: number
@@ -32,8 +33,21 @@ interface DefaultApplicationsListResponse {
   list: DefaultApplication[]
 }
 
-export function DefaultApplicationsManagement() {
+interface DefaultApplicationsManagementProps {
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+}
+
+export function DefaultApplicationsManagement({
+  activeTab: externalActiveTab,
+  onTabChange
+}: DefaultApplicationsManagementProps) {
   const [activeTab, setActiveTab] = useState("list")
+  useEffect(() => {
+    if (externalActiveTab && externalActiveTab !== activeTab) {
+      setActiveTab(externalActiveTab);
+    }
+  }, [externalActiveTab]);
   const [applications, setApplications] = useState<DefaultApplication[]>([])
   const [defaultReasons, setDefaultReasons] = useState<DefaultReason[]>([])
   const [loading, setLoading] = useState(false)
@@ -70,7 +84,9 @@ export function DefaultApplicationsManagement() {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false)
 
   const { toast } = useToast()
-
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  
   // Load applications data
   const loadApplications = async () => {
     setLoading(true)
@@ -124,6 +140,13 @@ export function DefaultApplicationsManagement() {
     setPagination((prev) => ({ ...prev, page: 1 }))
     loadApplications()
   }
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (onTabChange) {
+      onTabChange(value);
+    }
+  };
 
   // Handle view application detail
   const handleViewApplication = async (applicationId: number) => {
@@ -387,14 +410,16 @@ export function DefaultApplicationsManagement() {
               <CardTitle>违约认定申请管理</CardTitle>
               <CardDescription>管理违约认定申请的提交、查询和审核流程</CardDescription>
             </div>
-            <Button onClick={() => setActiveTab("submit")} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              新增申请
-            </Button>
+            {isAdmin && (
+              <Button onClick={() => setActiveTab("submit")} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                新增申请
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="list">申请列表</TabsTrigger>
               <TabsTrigger value="submit">提交申请</TabsTrigger>
@@ -459,28 +484,30 @@ export function DefaultApplicationsManagement() {
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBatchApproval(true)}
-                    disabled={selectedApplications.length === 0 || loading}
-                    className="text-green-600 hover:text-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    批量通过
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBatchApproval(false)}
-                    disabled={selectedApplications.length === 0 || loading}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    批量拒绝
-                  </Button>
-                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchApproval(true)}
+                      disabled={selectedApplications.length === 0 || loading}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      批量通过
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchApproval(false)}
+                      disabled={selectedApplications.length === 0 || loading}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      批量拒绝
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Table */}
@@ -574,13 +601,13 @@ export function DefaultApplicationsManagement() {
                               >
                                 <Eye className="h-3 w-3" />
                               </Button>
-                              {app.status === "PENDING" && (
+                              {isAdmin && app.status === "PENDING" && (
                                 <>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSingleApproval(app.applicationId, true)}
-                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                                    className="h-8 w-8 p-0 text-green-600"
                                   >
                                     <CheckCircle className="h-3 w-3" />
                                   </Button>
@@ -588,7 +615,7 @@ export function DefaultApplicationsManagement() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSingleApproval(app.applicationId, false)}
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                    className="h-8 w-8 p-0 text-red-600"
                                   >
                                     <XCircle className="h-3 w-3" />
                                   </Button>

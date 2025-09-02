@@ -289,7 +289,7 @@ export function DefaultReasonsManagement() {
                           <Switch
                             checked={reason.enabled}
                             onCheckedChange={() => handleStatusToggle(reason)}
-                            size="sm"
+                            className="data-[state=checked]:bg-blue-600 h-5 w-9"
                           />
                           <Badge variant={reason.enabled ? "default" : "secondary"}>
                             {reason.enabled ? "启用" : "禁用"}

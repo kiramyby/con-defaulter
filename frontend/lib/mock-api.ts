@@ -382,6 +382,57 @@ const mockRegionStats: RegionStats[] = [
   { region: "西南地区", count: 10, percentage: 10.0, trend: "STABLE" },
 ]
 
+export interface User {
+  id: number
+  username: string
+  password?: string
+  role: "employee" | "admin"
+  name: string
+}
+
+// 添加模拟用户数据
+const mockUsers: User[] = [
+  {
+    id: 1,
+    username: "employee1",
+    password: "123456",
+    role: "employee",
+    name: "普通员工"
+  },
+  {
+    id: 2,
+    username: "admin1",
+    password: "admin123",
+    role: "admin",
+    name: "系统管理员"
+  }
+]
+
+// 添加登录API
+// const mockApi = {
+//   login: async (credentials: {
+//     username: string
+//     password: string
+//     userType: "employee" | "admin"
+//   }): Promise<ApiResponse<User>> => {
+//     await new Promise(resolve => setTimeout(resolve, 600))
+
+//     const user = mockUsers.find(
+//       u => u.username === credentials.username && 
+//            u.password === credentials.password && 
+//            u.role === credentials.userType
+//     )
+
+//     if (!user) {
+//       return createApiResponse(null, 401, "用户名或密码错误")
+//     }
+
+//     // 返回不包含密码的用户信息
+//     const { password, ...userWithoutPassword } = user
+//     return createApiResponse(userWithoutPassword)
+//   }
+// }
+
 // Utility function to create mock API response
 function createApiResponse<T>(data: T, message = "success"): ApiResponse<T> {
   return {
@@ -394,6 +445,28 @@ function createApiResponse<T>(data: T, message = "success"): ApiResponse<T> {
 
 // Mock API functions
 export const mockApi = {
+  login: async (credentials: {
+    username: string
+    password: string
+    userType: "employee" | "admin"
+  }): Promise<ApiResponse<User | null>> => {
+    await new Promise(resolve => setTimeout(resolve, 600))
+
+    const user = mockUsers.find(
+      u => u.username === credentials.username && 
+           u.password === credentials.password && 
+           u.role === credentials.userType
+    )
+
+    if (!user) {
+      return createApiResponse(null, "用户名或密码错误")
+    }
+
+    // 返回不包含密码的用户信息
+    const { password, ...userWithoutPassword } = user
+    return createApiResponse(userWithoutPassword)
+  },
+  
   // Default Reasons API
   getDefaultReasons: async (params?: { page?: number; size?: number; enabled?: boolean }) => {
     await new Promise((resolve) => setTimeout(resolve, 500)) // Simulate network delay

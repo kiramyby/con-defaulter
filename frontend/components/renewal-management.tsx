@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, RefreshCw, CheckCircle, XCircle, RotateCcw } from "lucide-react"
 import { mockApi, type DefaultCustomer, type RenewalApplication, type RenewalReason } from "@/lib/mock-api"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth-context"
 
 interface RenewableCustomersListResponse {
   total: number
@@ -90,7 +91,8 @@ export function RenewalManagement() {
   })
 
   const { toast } = useToast()
-
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   // Load renewable customers
   const loadRenewableCustomers = async () => {
     setLoading(true)
@@ -558,28 +560,30 @@ export function RenewalManagement() {
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBatchApproval(true)}
-                    disabled={selectedApplications.length === 0 || loading}
-                    className="text-green-600 hover:text-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    批量通过
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBatchApproval(false)}
-                    disabled={selectedApplications.length === 0 || loading}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    批量拒绝
-                  </Button>
-                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchApproval(true)}
+                      disabled={selectedApplications.length === 0 || loading}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      批量通过
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchApproval(false)}
+                      disabled={selectedApplications.length === 0 || loading}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      批量拒绝
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Applications Table */}
@@ -661,7 +665,7 @@ export function RenewalManagement() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              {app.status === "PENDING" && (
+                              {isAdmin && app.status === "PENDING" && (
                                 <>
                                   <Button
                                     variant="outline"
