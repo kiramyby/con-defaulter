@@ -1,32 +1,46 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BarChart3, Users, AlertTriangle, CheckCircle, FileText, Building2, LogOut } from "lucide-react"
+import { BarChart3, Users, AlertTriangle, CheckCircle, FileText, Building2, LogOut, UserPlus } from "lucide-react"
 import { DefaultReasonsManagement } from "@/components/default-reasons-management"
 import { DefaultApplicationsManagement } from "@/components/default-applications-management"
 import { RenewalManagement } from "@/components/renewal-management"
 import { StatisticsAnalysis } from "@/components/statistics-analysis"
 import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from "@/lib/auth-context"
+import Link from "next/link"
+import { apiService } from "@/lib/api-service"
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("overview");
-  // 添加子标签状态管理
-  const [defaultApplicationsSubTab, setDefaultApplicationsSubTab] = useState("");
-  const { logout } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview")
+  const { user, logout, loading } = useAuth()
+  const [isMounted, setIsMounted] = useState(false)
 
-  // Mock data for dashboard
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  if (!isMounted || loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="text-muted-foreground">加载中...</span>
+        </div>
+      </div>
+    )
+  }
+
   const stats = {
     totalCustomers: 1247,
     defaultCustomers: 89,
     pendingApplications: 23,
     renewalApplications: 12,
   }
-
   const recentApplications = [
     {
       id: 1,
@@ -110,18 +124,25 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button size="sm" onClick={() => {
-                setActiveTab("applications");
-                // 同时设置子标签状态
-                setDefaultApplicationsSubTab("submit");
-              }}>
-                <Users className="h-4 w-4 mr-2" />
-                新增申请
+              <div className="text-sm text-muted-foreground">
+                欢迎，{user?.realName} ({user?.role})
+              </div>
+              {user?.role === "ADMIN" && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/register">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    创建用户
+                  </Link>
+                </Button>
+              )}
+              <Button variant="outline" size="sm">
+                <FileText className="h-4 w-4 mr-2" />
+                导出报告
               </Button>
               <Button variant="outline" size="sm" onClick={logout}>
                 <LogOut className="h-4 w-4 mr-2" />
-                  登出
-            </Button>
+                退出登录
+              </Button>
             </div>
           </div>
         </div>
@@ -218,7 +239,10 @@ export default function Dashboard() {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setActiveTab("reasons")}
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
@@ -228,7 +252,10 @@ export default function Dashboard() {
                 </CardHeader>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setActiveTab("applications")}
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-primary" />
@@ -238,7 +265,10 @@ export default function Dashboard() {
                 </CardHeader>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setActiveTab("statistics")}
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="h-5 w-5 text-primary" />
@@ -255,11 +285,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="applications">
-            {/* 传递子标签状态和回调函数 */}
-            <DefaultApplicationsManagement 
-              activeTab={defaultApplicationsSubTab} 
-              onTabChange={setDefaultApplicationsSubTab} 
-            />
+            <DefaultApplicationsManagement />
           </TabsContent>
 
           <TabsContent value="renewals">

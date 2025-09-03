@@ -8,10 +8,38 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3, PieChart, LineChart } from "lucide-react"
 import * as echarts from "echarts"
-import { mockApi, type StatisticsData, type TrendData } from "@/lib/mock-api"
+import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D", "#FFC658", "#FF7C7C"]
+
+interface StatisticsData {
+  year: number
+  type: string
+  total: number
+  industries?: Array<{
+    industry: string
+    count: number
+    percentage: number
+    trend: string
+  }>
+  regions?: Array<{
+    region: string
+    count: number
+    percentage: number
+    trend: string
+  }>
+}
+
+interface TrendData {
+  dimension: string
+  target: string
+  trend: Array<{
+    year: number
+    defaultCount: number
+    renewalCount: number
+  }>
+}
 
 export function StatisticsAnalysis() {
   const [loading, setLoading] = useState(false)
@@ -38,12 +66,12 @@ export function StatisticsAnalysis() {
     setLoading(true)
     try {
       const [industryResponse, regionResponse] = await Promise.all([
-        mockApi.getStatisticsByIndustry({ year: selectedYear, type: selectedType }),
-        mockApi.getStatisticsByRegion({ year: selectedYear, type: selectedType }),
+        apiService.getStatisticsByIndustry({ year: selectedYear, type: selectedType }),
+        apiService.getStatisticsByRegion({ year: selectedYear, type: selectedType }),
       ])
 
-      setIndustryData(industryResponse.data)
-      setRegionData(regionResponse.data)
+      setIndustryData(industryResponse)
+      setRegionData(regionResponse)
     } catch (error) {
       toast({
         title: "加载失败",
@@ -58,8 +86,8 @@ export function StatisticsAnalysis() {
   const loadTrendData = async () => {
     setLoading(true)
     try {
-      const response = await mockApi.getTrendStatistics(trendParams)
-      setTrendData(response.data)
+      const response = await apiService.getTrendStatistics(trendParams)
+      setTrendData(response)
     } catch (error) {
       toast({
         title: "加载失败",
@@ -122,7 +150,6 @@ export function StatisticsAnalysis() {
     }
     chart.setOption(option)
 
-    // 响应式处理
     const resizeHandler = () => chart.resize()
     window.addEventListener("resize", resizeHandler)
     return () => {
@@ -444,7 +471,7 @@ export function StatisticsAnalysis() {
                 value={selectedYear.toString()}
                 onValueChange={(value) => setSelectedYear(Number.parseInt(value))}
               >
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-32 bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -459,7 +486,7 @@ export function StatisticsAnalysis() {
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">统计类型:</label>
               <Select value={selectedType} onValueChange={(value: "DEFAULT" | "RENEWAL") => setSelectedType(value)}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-32 bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

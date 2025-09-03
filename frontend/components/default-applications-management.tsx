@@ -22,9 +22,38 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, RefreshCw, Eye, CheckCircle, XCircle, Upload, FileText } from "lucide-react"
-import { mockApi, type DefaultApplication, type DefaultReason } from "@/lib/mock-api"
+import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/lib/auth-context"
+
+interface DefaultApplication {
+  applicationId: number
+  customerName: string
+  latestExternalRating?: string
+  defaultReasons: Array<{
+    id: number
+    reason: string
+  }>
+  severity: "HIGH" | "MEDIUM" | "LOW"
+  remark?: string
+  attachments?: Array<{
+    fileName: string
+    fileUrl: string
+    fileSize: number
+  }>
+  applicant: string
+  status: "PENDING" | "APPROVED" | "REJECTED"
+  createTime: string
+  approveTime?: string
+  approver?: string
+  approveRemark?: string
+}
+
+interface DefaultReason {
+  id: number
+  reason: string
+  enabled: boolean
+  sortOrder: number
+}
 
 interface DefaultApplicationsListResponse {
   total: number
@@ -33,21 +62,8 @@ interface DefaultApplicationsListResponse {
   list: DefaultApplication[]
 }
 
-interface DefaultApplicationsManagementProps {
-  activeTab?: string;
-  onTabChange?: (tab: string) => void;
-}
-
-export function DefaultApplicationsManagement({
-  activeTab: externalActiveTab,
-  onTabChange
-}: DefaultApplicationsManagementProps) {
+export function DefaultApplicationsManagement() {
   const [activeTab, setActiveTab] = useState("list")
-  useEffect(() => {
-    if (externalActiveTab && externalActiveTab !== activeTab) {
-      setActiveTab(externalActiveTab);
-    }
-  }, [externalActiveTab]);
   const [applications, setApplications] = useState<DefaultApplication[]>([])
   const [defaultReasons, setDefaultReasons] = useState<DefaultReason[]>([])
   const [loading, setLoading] = useState(false)
@@ -81,17 +97,13 @@ export function DefaultApplicationsManagement({
     remark: "",
     attachments: [] as Array<{ fileName: string; fileUrl: string; fileSize: number }>,
   })
-  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false)
 
   const { toast } = useToast()
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  
-  // Load applications data
+
   const loadApplications = async () => {
     setLoading(true)
     try {
-      const response = await mockApi.getDefaultApplications({
+      const response = await apiService.getDefaultApplications({
         page: pagination.page,
         size: pagination.size,
         customerName: filters.customerName || undefined,
@@ -100,11 +112,10 @@ export function DefaultApplicationsManagement({
         endTime: filters.endTime || undefined,
       })
 
-      const data = response.data as DefaultApplicationsListResponse
-      setApplications(data.list)
+      setApplications(response.list)
       setPagination((prev) => ({
         ...prev,
-        total: data.total,
+        total: response.total,
       }))
     } catch (error) {
       toast({
@@ -117,11 +128,10 @@ export function DefaultApplicationsManagement({
     }
   }
 
-  // Load default reasons for form
   const loadDefaultReasons = async () => {
     try {
-      const response = await mockApi.getDefaultReasons({ enabled: true })
-      setDefaultReasons(response.data.list)
+      const response = await apiService.getDefaultReasons({ enabled: true })
+      setDefaultReasons(response.list)
     } catch (error) {
       console.error("Failed to load default reasons:", error)
     }
@@ -141,18 +151,10 @@ export function DefaultApplicationsManagement({
     loadApplications()
   }
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (onTabChange) {
-      onTabChange(value);
-    }
-  };
-
-  // Handle view application detail
   const handleViewApplication = async (applicationId: number) => {
     try {
-      const response = await mockApi.getDefaultApplicationDetail(applicationId)
-      setViewingApplication(response.data)
+      const response = await apiService.getDefaultApplicationDetail(applicationId)
+      setViewingApplication(response)
       setIsViewDialogOpen(true)
     } catch (error) {
       toast({
@@ -173,11 +175,11 @@ export function DefaultApplicationsManagement({
     setIsApprovalDialogOpen(true)
   }
 
-  // Submit single approval
   const submitSingleApproval = async () => {
     setLoading(true)
     try {
-      await mockApi.approveDefaultApplication(approvalData.applicationId, {
+      console.log("approvalData", JSON.stringify(approvalData))
+      await apiService.approveDefaultApplication(approvalData.applicationId, {
         approved: approvalData.approved,
         remark: approvalData.remark,
       })
@@ -189,6 +191,8 @@ export function DefaultApplicationsManagement({
       setApprovalData({ applicationId: 0, approved: true, remark: "" })
       loadApplications()
     } catch (error) {
+      console.error("Failed to submit single approval:", error)
+      console.log(JSON.stringify(approvalData))
       toast({
         title: "审核失败",
         description: "无法完成审核操作",
@@ -199,7 +203,6 @@ export function DefaultApplicationsManagement({
     }
   }
 
-  // Handle batch approval
   const handleBatchApproval = async (approved: boolean) => {
     if (selectedApplications.length === 0) {
       toast({
@@ -218,7 +221,7 @@ export function DefaultApplicationsManagement({
         remark: approved ? "批量通过" : "批量拒绝",
       }))
 
-      await mockApi.batchApproveDefaultApplications(batchData)
+      await apiService.batchApproveDefaultApplications(batchData)
       toast({
         title: "批量审核成功",
         description: `已${approved ? "通过" : "拒绝"} ${selectedApplications.length} 个申请`,
@@ -236,7 +239,6 @@ export function DefaultApplicationsManagement({
     }
   }
 
-  // Handle form submission
   const handleSubmitApplication = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -260,16 +262,13 @@ export function DefaultApplicationsManagement({
 
     setLoading(true)
     try {
-      const selectedReasons = defaultReasons.filter((reason) => formData.defaultReasons.includes(reason.id))
-
-      await mockApi.createDefaultApplication({
+      await apiService.createDefaultApplication({
         customerName: formData.customerName,
         latestExternalRating: formData.latestExternalRating || undefined,
-        defaultReasons: selectedReasons,
+        defaultReasons: formData.defaultReasons,
         severity: formData.severity,
         remark: formData.remark || undefined,
         attachments: formData.attachments.length > 0 ? formData.attachments : undefined,
-        applicant: "当前用户", // In real app, this would be from auth context
       })
 
       toast({
@@ -286,7 +285,6 @@ export function DefaultApplicationsManagement({
         remark: "",
         attachments: [],
       })
-      setIsSubmitDialogOpen(false)
       setActiveTab("list")
       loadApplications()
     } catch (error: any) {
@@ -300,7 +298,6 @@ export function DefaultApplicationsManagement({
     }
   }
 
-  // Handle file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -328,8 +325,7 @@ export function DefaultApplicationsManagement({
     }
 
     try {
-      const response = await mockApi.uploadFile(file)
-      const uploadedFile = response.data
+      const uploadedFile = await apiService.uploadFile(file)
 
       setFormData((prev) => ({
         ...prev,
@@ -400,7 +396,7 @@ export function DefaultApplicationsManagement({
         return <Badge variant="outline">{severity}</Badge>
     }
   }
-
+  console.log(JSON.stringify(applications))
   return (
     <div className="space-y-6">
       <Card>
@@ -410,16 +406,14 @@ export function DefaultApplicationsManagement({
               <CardTitle>违约认定申请管理</CardTitle>
               <CardDescription>管理违约认定申请的提交、查询和审核流程</CardDescription>
             </div>
-            {isAdmin && (
-              <Button onClick={() => setActiveTab("submit")} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                新增申请
-              </Button>
-            )}
+            <Button onClick={() => setActiveTab("submit")} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              新增申请
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="list">申请列表</TabsTrigger>
               <TabsTrigger value="submit">提交申请</TabsTrigger>
@@ -432,6 +426,7 @@ export function DefaultApplicationsManagement({
                   <Label htmlFor="customer-search">客户名称</Label>
                   <Input
                     id="customer-search"
+                    className="bg-white"
                     placeholder="搜索客户名称..."
                     value={filters.customerName}
                     onChange={(e) => setFilters((prev) => ({ ...prev, customerName: e.target.value }))}
@@ -443,8 +438,8 @@ export function DefaultApplicationsManagement({
                     value={filters.status}
                     onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择状态" />
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="选择状态"  />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">全部状态</SelectItem>
@@ -455,10 +450,11 @@ export function DefaultApplicationsManagement({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="start-time">开始时间</Label>
+                  <Label htmlFor="start-time" >开始时间</Label>
                   <Input
                     id="start-time"
                     type="date"
+                    className="bg-white"
                     value={filters.startTime}
                     onChange={(e) => setFilters((prev) => ({ ...prev, startTime: e.target.value }))}
                   />
@@ -469,6 +465,7 @@ export function DefaultApplicationsManagement({
                     id="end-time"
                     type="date"
                     value={filters.endTime}
+                    className="bg-white"
                     onChange={(e) => setFilters((prev) => ({ ...prev, endTime: e.target.value }))}
                   />
                 </div>
@@ -484,30 +481,28 @@ export function DefaultApplicationsManagement({
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   </Button>
                 </div>
-                {isAdmin && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleBatchApproval(true)}
-                      disabled={selectedApplications.length === 0 || loading}
-                      className="text-green-600 hover:text-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      批量通过
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleBatchApproval(false)}
-                      disabled={selectedApplications.length === 0 || loading}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      批量拒绝
-                    </Button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBatchApproval(true)}
+                    disabled={selectedApplications.length === 0 || loading}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    批量通过
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBatchApproval(false)}
+                    disabled={selectedApplications.length === 0 || loading}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    批量拒绝
+                  </Button>
+                </div>
               </div>
 
               {/* Table */}
@@ -521,13 +516,13 @@ export function DefaultApplicationsManagement({
                             applications.length > 0 &&
                             applications
                               .filter((app) => app.status === "PENDING")
-                              .every((app) => selectedApplications.includes(app.applicationId))
+                              .every((app) => selectedApplications.includes(app.id))
                           }
                           onCheckedChange={(checked) => {
                             if (checked) {
                               const pendingIds = applications
                                 .filter((app) => app.status === "PENDING")
-                                .map((app) => app.applicationId)
+                                .map((app) => app.id)
                               setSelectedApplications(pendingIds)
                             } else {
                               setSelectedApplications([])
@@ -535,6 +530,7 @@ export function DefaultApplicationsManagement({
                           }}
                         />
                       </TableHead>
+                      <TableHead>客户ID</TableHead>
                       <TableHead>客户名称</TableHead>
                       <TableHead>申请人</TableHead>
                       <TableHead>状态</TableHead>
@@ -562,21 +558,22 @@ export function DefaultApplicationsManagement({
                       </TableRow>
                     ) : (
                       applications.map((app) => (
-                        <TableRow key={app.applicationId}>
+                        <TableRow key={app.id}>
                           <TableCell>
                             {app.status === "PENDING" && (
                               <Checkbox
-                                checked={selectedApplications.includes(app.applicationId)}
+                                checked={selectedApplications.includes(app.id)}
                                 onCheckedChange={(checked) => {
                                   if (checked) {
-                                    setSelectedApplications((prev) => [...prev, app.applicationId])
+                                    setSelectedApplications((prev) => [...prev, app.id])
                                   } else {
-                                    setSelectedApplications((prev) => prev.filter((id) => id !== app.applicationId))
+                                    setSelectedApplications((prev) => prev.filter((id) => id !== app.id))
                                   }
                                 }}
                               />
                             )}
                           </TableCell>
+                          <TableCell className="font-medium">{app.customerId}</TableCell>
                           <TableCell className="font-medium">{app.customerName}</TableCell>
                           <TableCell>{app.applicant}</TableCell>
                           <TableCell>{getStatusBadge(app.status)}</TableCell>
@@ -584,7 +581,7 @@ export function DefaultApplicationsManagement({
                           <TableCell>
                             <div className="max-w-xs">
                               <p className="text-sm text-muted-foreground truncate">
-                                {app.defaultReasons.map((r) => r.reason).join(", ")}
+                                {app.defaultReasons.map((r) => `原因${r}`).join(", ")}
                               </p>
                             </div>
                           </TableCell>
@@ -596,18 +593,18 @@ export function DefaultApplicationsManagement({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleViewApplication(app.applicationId)}
+                                onClick={() => handleViewApplication(app.id)}
                                 className="h-8 w-8 p-0"
                               >
                                 <Eye className="h-3 w-3" />
                               </Button>
-                              {isAdmin && app.status === "PENDING" && (
+                              {app.status === "PENDING" && (
                                 <>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSingleApproval(app.applicationId, true)}
-                                    className="h-8 w-8 p-0 text-green-600"
+                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
                                   >
                                     <CheckCircle className="h-3 w-3" />
                                   </Button>
@@ -615,7 +612,7 @@ export function DefaultApplicationsManagement({
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSingleApproval(app.applicationId, false)}
-                                    className="h-8 w-8 p-0 text-red-600"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                                   >
                                     <XCircle className="h-3 w-3" />
                                   </Button>
@@ -667,6 +664,7 @@ export function DefaultApplicationsManagement({
                       id="customer-name"
                       placeholder="请输入客户名称"
                       value={formData.customerName}
+                      className="bg-white"
                       onChange={(e) => setFormData((prev) => ({ ...prev, customerName: e.target.value }))}
                       maxLength={100}
                       required
@@ -678,6 +676,7 @@ export function DefaultApplicationsManagement({
                       id="external-rating"
                       placeholder="如：AAA、AA+、A等"
                       value={formData.latestExternalRating}
+                      className="bg-white"
                       onChange={(e) => setFormData((prev) => ({ ...prev, latestExternalRating: e.target.value }))}
                     />
                   </div>
@@ -753,7 +752,7 @@ export function DefaultApplicationsManagement({
                         type="file"
                         accept=".pdf,.doc,.docx,.xls,.xlsx"
                         onChange={handleFileUpload}
-                        className="hidden"
+                        className="hidden bg-white"
                         id="file-upload"
                       />
                       <Label
@@ -845,7 +844,7 @@ export function DefaultApplicationsManagement({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">申请ID</Label>
-                  <p className="text-sm">{viewingApplication.applicationId}</p>
+                  <p className="text-sm">{viewingApplication.id}</p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">客户名称</Label>

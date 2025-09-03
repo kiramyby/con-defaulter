@@ -32,8 +32,18 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Edit, Trash2, RefreshCw } from "lucide-react"
-import { mockApi, type DefaultReason } from "@/lib/mock-api"
+import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
+
+interface DefaultReason {
+  id: number
+  reasonCode: string
+  reasonName: string
+  description: string
+  isEnabled: boolean
+  createTime: string
+  updateTime: string
+}
 
 interface DefaultReasonsListResponse {
   total: number
@@ -51,12 +61,14 @@ export function DefaultReasonsManagement() {
     total: 0,
   })
   const [filters, setFilters] = useState({
-    enabled: undefined as boolean | undefined,
+    reasonName: "",
+    isEnabled: undefined as boolean | undefined,
   })
   const [editingReason, setEditingReason] = useState<DefaultReason | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     reason: "",
+    detail: "",
     enabled: true,
     sortOrder: 1,
   })
@@ -67,13 +79,13 @@ export function DefaultReasonsManagement() {
   const loadReasons = async () => {
     setLoading(true)
     try {
-      const response = await mockApi.getDefaultReasons({
+      const response = await apiService.getDefaultReasons({
         page: pagination.page,
         size: pagination.size,
-        enabled: filters.enabled,
+        reasonName: filters.reasonName || undefined,
+        isEnabled: filters.isEnabled,
       })
-
-      const data = response.data as DefaultReasonsListResponse
+      const data = response as DefaultReasonsListResponse
       setReasons(data.list)
       setPagination((prev) => ({
         ...prev,
@@ -92,16 +104,16 @@ export function DefaultReasonsManagement() {
 
   useEffect(() => {
     loadReasons()
-  }, [pagination.page, pagination.size, filters.enabled])
+  }, [pagination.page, pagination.size, filters.reasonName, filters.isEnabled])
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.reason.trim()) {
+    if (!formData.reason.trim() || !formData.detail.trim()) {
       toast({
         title: "验证失败",
-        description: "违约原因不能为空",
+        description: "违约原因和详细描述不能为空",
         variant: "destructive",
       })
       return
@@ -110,13 +122,18 @@ export function DefaultReasonsManagement() {
     setLoading(true)
     try {
       if (editingReason) {
-        await mockApi.updateDefaultReason(editingReason.id, formData)
         toast({
-          title: "更新成功",
-          description: "违约原因已更新",
+          title: "功能暂不支持",
+          description: "当前API版本不支持更新违约原因",
+          variant: "destructive",
         })
       } else {
-        await mockApi.createDefaultReason(formData)
+        await apiService.createDefaultReason({
+          reason: formData.reason,
+          detail: formData.detail,
+          enabled: formData.enabled,
+          sortOrder: formData.sortOrder,
+        })
         toast({
           title: "创建成功",
           description: "违约原因已创建",
@@ -125,7 +142,7 @@ export function DefaultReasonsManagement() {
 
       setIsDialogOpen(false)
       setEditingReason(null)
-      setFormData({ reason: "", enabled: true, sortOrder: 1 })
+      setFormData({ reason: "", detail: "", enabled: true, sortOrder: 1 })
       loadReasons()
     } catch (error) {
       toast({
@@ -140,32 +157,21 @@ export function DefaultReasonsManagement() {
 
   // Handle delete
   const handleDelete = async (id: number) => {
-    setLoading(true)
-    try {
-      await mockApi.deleteDefaultReason(id)
-      toast({
-        title: "删除成功",
-        description: "违约原因已删除",
-      })
-      loadReasons()
-    } catch (error) {
-      toast({
-        title: "删除失败",
-        description: "无法删除违约原因",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
+    toast({
+      title: "功能暂不支持",
+      description: "当前API版本不支持删除违约原因",
+      variant: "destructive",
+    })
   }
 
   // Handle edit
   const handleEdit = (reason: DefaultReason) => {
     setEditingReason(reason)
     setFormData({
-      reason: reason.reason,
-      enabled: reason.enabled,
-      sortOrder: reason.sortOrder,
+      reason: reason.reasonName,
+      detail: reason.description,
+      enabled: reason.isEnabled,
+      sortOrder: 1,
     })
     setIsDialogOpen(true)
   }
@@ -173,28 +179,19 @@ export function DefaultReasonsManagement() {
   // Handle add new
   const handleAddNew = () => {
     setEditingReason(null)
-    setFormData({ reason: "", enabled: true, sortOrder: reasons.length + 1 })
+    setFormData({ reason: "", detail: "", enabled: true, sortOrder: reasons.length + 1 })
     setIsDialogOpen(true)
   }
 
   // Handle status toggle
   const handleStatusToggle = async (reason: DefaultReason) => {
-    try {
-      await mockApi.updateDefaultReason(reason.id, { enabled: !reason.enabled })
-      toast({
-        title: "状态更新成功",
-        description: `违约原因已${!reason.enabled ? "启用" : "禁用"}`,
-      })
-      loadReasons()
-    } catch (error) {
-      toast({
-        title: "状态更新失败",
-        description: "无法更新违约原因状态",
-        variant: "destructive",
-      })
-    }
+    toast({
+      title: "功能暂不支持",
+      description: "当前API版本不支持更新违约原因状态",
+      variant: "destructive",
+    })
   }
-
+  console.log(reasons)
   return (
     <div className="space-y-6">
       <Card>
@@ -214,17 +211,28 @@ export function DefaultReasonsManagement() {
           {/* Filters */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
+              <Label htmlFor="name-filter">原因名称：</Label>
+              <Input
+                id="name-filter"
+                placeholder="搜索原因名称..."
+                value={filters.reasonName}
+                onChange={(e) => setFilters((prev) => ({ ...prev, reasonName: e.target.value }))}
+                className="w-48 bg-white"
+              />
+            </div>
+            <div className="flex items-center gap-2">
               <Label htmlFor="status-filter">状态筛选：</Label>
               <Select
-                value={filters.enabled === undefined ? "all" : filters.enabled.toString()}
+                value={filters.isEnabled === undefined ? "all" : filters.isEnabled.toString()}
                 onValueChange={(value) => {
-                  setFilters({
-                    enabled: value === "all" ? undefined : value === "true",
-                  })
+                  setFilters((prev) => ({
+                    ...prev,
+                    isEnabled: value === "all" ? undefined : value === "true",
+                  }))
                   setPagination((prev) => ({ ...prev, page: 1 }))
                 }}
               >
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-32 bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -252,9 +260,10 @@ export function DefaultReasonsManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">序号</TableHead>
-                  <TableHead>违约原因</TableHead>
+                  {/* <TableHead>原因代码</TableHead> */}
+                  <TableHead>原因名称</TableHead>
+                  <TableHead>详细描述</TableHead>
                   <TableHead className="w-24">状态</TableHead>
-                  <TableHead className="w-24">排序</TableHead>
                   <TableHead className="w-40">创建时间</TableHead>
                   <TableHead className="w-32">操作</TableHead>
                 </TableRow>
@@ -262,7 +271,7 @@ export function DefaultReasonsManagement() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         加载中...
@@ -271,32 +280,34 @@ export function DefaultReasonsManagement() {
                   </TableRow>
                 ) : reasons.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       暂无数据
                     </TableCell>
                   </TableRow>
                 ) : (
+                  console.log(JSON.stringify(reasons)),
                   reasons.map((reason, index) => (
                     <TableRow key={reason.id}>
                       <TableCell>{(pagination.page - 1) * pagination.size + index + 1}</TableCell>
+                      {/* <TableCell>{reason.reasonCode}</TableCell> */}
+                      <TableCell>{reason.reason}</TableCell>
                       <TableCell>
                         <div className="max-w-md">
-                          <p className="text-sm leading-relaxed">{reason.reason}</p>
+                          <p className="text-sm leading-relaxed">{reason.detail}</p>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Switch
-                            checked={reason.enabled}
+                          {/* <Switch
+                            checked={reason.isEnabled}
                             onCheckedChange={() => handleStatusToggle(reason)}
-                            className="data-[state=checked]:bg-blue-600 h-5 w-9"
-                          />
-                          <Badge variant={reason.enabled ? "default" : "secondary"}>
-                            {reason.enabled ? "启用" : "禁用"}
+                            size="sm"
+                          /> */}
+                          <Badge variant={reason.isEnabled ? "default" : "destructive"}>
+                            {reason.isEnabled ? "启用" : "禁用"}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>{reason.sortOrder}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {new Date(reason.createTime).toLocaleString("zh-CN")}
                       </TableCell>
@@ -387,17 +398,27 @@ export function DefaultReasonsManagement() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="reason">违约原因 *</Label>
-              <Textarea
+              <Label htmlFor="reason">违约原因名称 *</Label>
+              <Input
                 id="reason"
-                placeholder="请输入违约原因描述..."
+                placeholder="请输入违约原因名称..."
                 value={formData.reason}
+                className="bg-white"
                 onChange={(e) => setFormData((prev) => ({ ...prev, reason: e.target.value }))}
-                rows={4}
-                maxLength={500}
+                maxLength={255}
                 required
               />
-              <div className="text-xs text-muted-foreground text-right">{formData.reason.length}/500</div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="detail">详细描述 *</Label>
+              <Textarea
+                id="detail"
+                placeholder="请输入详细描述..."
+                value={formData.detail}
+                onChange={(e) => setFormData((prev) => ({ ...prev, detail: e.target.value }))}
+                rows={4}
+                required
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -405,10 +426,11 @@ export function DefaultReasonsManagement() {
                 <Input
                   id="sortOrder"
                   type="number"
-                  min="1"
+                  min="0"
+                  className="bg-white"
                   value={formData.sortOrder}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, sortOrder: Number.parseInt(e.target.value) || 1 }))
+                    setFormData((prev) => ({ ...prev, sortOrder: Number.parseInt(e.target.value) || 0 }))
                   }
                 />
               </div>

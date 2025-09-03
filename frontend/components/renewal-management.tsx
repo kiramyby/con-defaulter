@@ -22,9 +22,42 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, RefreshCw, CheckCircle, XCircle, RotateCcw } from "lucide-react"
-import { mockApi, type DefaultCustomer, type RenewalApplication, type RenewalReason } from "@/lib/mock-api"
+import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/lib/auth-context"
+
+interface DefaultCustomer {
+  customerId: number
+  customerName: string
+  defaultReasons: string[]
+  severity: string
+  applicant: string
+  applicationTime: string
+  approveTime: string
+  latestExternalRating: string
+}
+
+interface RenewalApplication {
+  renewalId: number
+  customerId: number
+  customerName: string
+  renewalReason: {
+    id: number
+    reason: string
+  }
+  remark?: string
+  applicant: string
+  status: string
+  createTime: string
+  approveTime?: string
+  approver?: string
+  approveRemark?: string
+}
+
+interface RenewalReason {
+  id: number
+  reason: string
+  enabled: boolean
+}
 
 interface RenewableCustomersListResponse {
   total: number
@@ -46,6 +79,7 @@ export function RenewalManagement() {
   const [renewalApplications, setRenewalApplications] = useState<RenewalApplication[]>([])
   const [renewalReasons, setRenewalReasons] = useState<RenewalReason[]>([])
   const [loading, setLoading] = useState(false)
+  const [currentCustomerId, setCurrentCustomerId] = useState(undefined)
 
   // Pagination for customers
   const [customerPagination, setCustomerPagination] = useState({
@@ -91,23 +125,21 @@ export function RenewalManagement() {
   })
 
   const { toast } = useToast()
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+
   // Load renewable customers
   const loadRenewableCustomers = async () => {
     setLoading(true)
     try {
-      const response = await mockApi.getRenewableCustomers({
+      const response = await apiService.getRenewableCustomers({
         page: customerPagination.page,
         size: customerPagination.size,
         customerName: customerFilters.customerName || undefined,
       })
 
-      const data = response.data as RenewableCustomersListResponse
-      setRenewableCustomers(data.list)
+      setRenewableCustomers(response.list)
       setCustomerPagination((prev) => ({
         ...prev,
-        total: data.total,
+        total: response.total,
       }))
     } catch (error) {
       toast({
@@ -124,7 +156,7 @@ export function RenewalManagement() {
   const loadRenewalApplications = async () => {
     setLoading(true)
     try {
-      const response = await mockApi.getRenewalApplications({
+      const response = await apiService.getRenewalApplications({
         page: applicationPagination.page,
         size: applicationPagination.size,
         customerName: applicationFilters.customerName || undefined,
@@ -133,11 +165,10 @@ export function RenewalManagement() {
         endTime: applicationFilters.endTime || undefined,
       })
 
-      const data = response.data as RenewalApplicationsListResponse
-      setRenewalApplications(data.list)
+      setRenewalApplications(response.list)
       setApplicationPagination((prev) => ({
         ...prev,
-        total: data.total,
+        total: response.total,
       }))
     } catch (error) {
       toast({
@@ -153,8 +184,8 @@ export function RenewalManagement() {
   // Load renewal reasons
   const loadRenewalReasons = async () => {
     try {
-      const response = await mockApi.getRenewalReasons()
-      setRenewalReasons(response.data)
+      const response = await apiService.getRenewalReasons()
+      setRenewalReasons(response)
     } catch (error) {
       console.error("Failed to load renewal reasons:", error)
     }
@@ -209,17 +240,10 @@ export function RenewalManagement() {
 
     setLoading(true)
     try {
-      const selectedReason = renewalReasons.find((r) => r.id === formData.renewalReason)
-      if (!selectedReason) {
-        throw new Error("重生原因不存在")
-      }
-
-      await mockApi.createRenewalApplication({
+      await apiService.createRenewalApplication({
         customerId: selectedCustomer.customerId,
-        customerName: selectedCustomer.customerName,
-        renewalReason: selectedReason,
+        renewalReason: formData.renewalReason,
         remark: formData.remark || undefined,
-        applicant: "当前用户", // In real app, this would be from auth context
       })
 
       toast({
@@ -263,7 +287,7 @@ export function RenewalManagement() {
   const submitSingleApproval = async () => {
     setLoading(true)
     try {
-      await mockApi.approveRenewalApplication(approvalData.renewalId, {
+      await apiService.approveRenewalApplication(approvalData.renewalId.toString(), {
         approved: approvalData.approved,
         remark: approvalData.remark,
       })
@@ -275,6 +299,7 @@ export function RenewalManagement() {
       setApprovalData({ renewalId: 0, approved: true, remark: "" })
       loadRenewalApplications()
     } catch (error) {
+      console.error("Failed to submit single approval:", error)
       toast({
         title: "审核失败",
         description: "无法完成审核操作",
@@ -304,7 +329,7 @@ export function RenewalManagement() {
         remark: approved ? "批量通过" : "批量拒绝",
       }))
 
-      await mockApi.batchApproveRenewalApplications(batchData)
+      await apiService.batchApproveRenewalApplications(batchData)
       toast({
         title: "批量审核成功",
         description: `已${approved ? "通过" : "拒绝"} ${selectedApplications.length} 个申请`,
@@ -389,6 +414,7 @@ export function RenewalManagement() {
                   <Label htmlFor="customer-search">客户名称</Label>
                   <Input
                     id="customer-search"
+                    className="bg-white"
                     placeholder="搜索客户名称..."
                     value={customerFilters.customerName}
                     onChange={(e) => setCustomerFilters((prev) => ({ ...prev, customerName: e.target.value }))}
@@ -410,6 +436,7 @@ export function RenewalManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>客户ID</TableHead>
                       <TableHead>客户名称</TableHead>
                       <TableHead>违约原因</TableHead>
                       <TableHead>严重程度</TableHead>
@@ -438,6 +465,7 @@ export function RenewalManagement() {
                     ) : (
                       renewableCustomers.map((customer) => (
                         <TableRow key={customer.customerId}>
+                          <TableCell className="font-medium">{customer.customerId}</TableCell>
                           <TableCell className="font-medium">{customer.customerName}</TableCell>
                           <TableCell>
                             <div className="max-w-xs">
@@ -508,6 +536,7 @@ export function RenewalManagement() {
                   <Label htmlFor="app-customer-search">客户名称</Label>
                   <Input
                     id="app-customer-search"
+                    className="bg-white"
                     placeholder="搜索客户名称..."
                     value={applicationFilters.customerName}
                     onChange={(e) => setApplicationFilters((prev) => ({ ...prev, customerName: e.target.value }))}
@@ -534,6 +563,7 @@ export function RenewalManagement() {
                   <Label htmlFor="app-start-time">开始时间</Label>
                   <Input
                     id="app-start-time"
+                    className="bg-white"
                     type="date"
                     value={applicationFilters.startTime}
                     onChange={(e) => setApplicationFilters((prev) => ({ ...prev, startTime: e.target.value }))}
@@ -543,6 +573,7 @@ export function RenewalManagement() {
                   <Label htmlFor="app-end-time">结束时间</Label>
                   <Input
                     id="app-end-time"
+                    className="bg-white"
                     type="date"
                     value={applicationFilters.endTime}
                     onChange={(e) => setApplicationFilters((prev) => ({ ...prev, endTime: e.target.value }))}
@@ -560,30 +591,28 @@ export function RenewalManagement() {
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   </Button>
                 </div>
-                {isAdmin && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleBatchApproval(true)}
-                      disabled={selectedApplications.length === 0 || loading}
-                      className="text-green-600 hover:text-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      批量通过
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleBatchApproval(false)}
-                      disabled={selectedApplications.length === 0 || loading}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      批量拒绝
-                    </Button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBatchApproval(true)}
+                    disabled={selectedApplications.length === 0 || loading}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    批量通过
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBatchApproval(false)}
+                    disabled={selectedApplications.length === 0 || loading}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    批量拒绝
+                  </Button>
+                </div>
               </div>
 
               {/* Applications Table */}
@@ -611,6 +640,7 @@ export function RenewalManagement() {
                           }}
                         />
                       </TableHead>
+                      <TableHead>客户ID</TableHead>
                       <TableHead>客户名称</TableHead>
                       <TableHead>重生原因</TableHead>
                       <TableHead>申请人</TableHead>
@@ -652,6 +682,7 @@ export function RenewalManagement() {
                               />
                             )}
                           </TableCell>
+                          <TableCell className="font-medium">{app.customerId}</TableCell>
                           <TableCell className="font-medium">{app.customerName}</TableCell>
                           <TableCell>
                             <div className="max-w-xs">
@@ -665,7 +696,7 @@ export function RenewalManagement() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              {isAdmin && app.status === "PENDING" && (
+                              {app.status === "PENDING" && (
                                 <>
                                   <Button
                                     variant="outline"
