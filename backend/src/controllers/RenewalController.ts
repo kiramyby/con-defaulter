@@ -81,13 +81,17 @@ export class RenewalController {
    */
   getRenewals = async (req: Request, res: Response) => {
     try {
-      const { page = 1, size = 10, status, customerName } = req.query as any;
+      const { page = 1, size = 10, status, customerName, applicant } = req.query as any;
+      const user = req.user;
       
       const result = await this.renewalService.getRenewals(
         parseInt(page),
         parseInt(size),
         status,
         customerName,
+        applicant,
+        user?.role,
+        user?.username,
       );
       
       return ResponseUtil.success(res, result, '查询成功');
@@ -104,8 +108,13 @@ export class RenewalController {
   getRenewalDetail = async (req: Request, res: Response) => {
     try {
       const { renewalId } = req.params;
+      const user = req.user;
       
-      const renewal = await this.renewalService.getRenewalDetail(renewalId);
+      const renewal = await this.renewalService.getRenewalDetail(
+        renewalId,
+        user?.role,
+        user?.username
+      );
       
       if (!renewal) {
         return ResponseUtil.notFound(res, '重生申请不存在');
@@ -114,6 +123,30 @@ export class RenewalController {
       return ResponseUtil.success(res, renewal, '查询成功');
     } catch (error: any) {
       logger.error('获取重生申请详情失败:', error);
+      
+      // 处理权限错误
+      if (error.message.includes('无权限')) {
+        return ResponseUtil.forbidden(res, error.message);
+      }
+      
+      return ResponseUtil.internalError(res, error.message);
+    }
+  };
+
+  /**
+   * 批量审核重生申请
+   * POST /api/v1/renewals/batch-approve
+   */
+  batchApproveRenewals = async (req: Request, res: Response) => {
+    try {
+      const { renewals } = req.body;
+      const approver = req.user?.username || 'system';
+
+      const result = await this.renewalService.batchApproveRenewals(renewals, approver);
+      
+      return ResponseUtil.success(res, result, '批量审核完成');
+    } catch (error: any) {
+      logger.error('批量审核重生申请失败:', error);
       return ResponseUtil.internalError(res, error.message);
     }
   };

@@ -1092,10 +1092,94 @@ const initializeRoutes = (prisma: PrismaClient) => {
   );
 
   // ==================== 违约重生管理路由 ====================
+  
+  /**
+   * @swagger
+   * /renewal-reasons:
+   *   get:
+   *     tags: [违约重生管理]
+   *     summary: 获取重生原因列表
+   *     description: 获取所有启用的违约重生原因，用于创建重生申请时选择
+   *     responses:
+   *       200:
+   *         description: 查询成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   id:
+   *                     type: number
+   *                     description: 重生原因ID
+   *                   reason:
+   *                     type: string
+   *                     description: 重生原因名称
+   *                   enabled:
+   *                     type: boolean
+   *                     description: 是否启用
+   */
   router.get('/renewal-reasons',
     renewalController.getRenewalReasons,
   );
   
+  /**
+   * @swagger
+   * /renewals:
+   *   post:
+   *     tags: [违约重生管理]
+   *     summary: 提交违约重生申请
+   *     description: 为违约客户提交重生申请，需要ADMIN或OPERATOR权限
+   *     security:
+   *       - BearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - customerId
+   *               - renewalReason
+   *             properties:
+   *               customerId:
+   *                 type: number
+   *                 description: 违约客户ID
+   *               renewalReason:
+   *                 type: number
+   *                 description: 重生原因ID
+   *               remark:
+   *                 type: string
+   *                 maxLength: 1000
+   *                 description: 申请备注
+   *     responses:
+   *       201:
+   *         description: 申请创建成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 renewalId:
+   *                   type: string
+   *                 customerId:
+   *                   type: number
+   *                 customerName:
+   *                   type: string
+   *                 status:
+   *                   type: string
+   *                   enum: [PENDING]
+   *                 createTime:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: 参数错误或客户状态不符合要求
+   *       401:
+   *         description: 未授权
+   *       403:
+   *         description: 权限不足
+   */
   router.post('/renewals',
     authenticateToken,
     requireRole(['ADMIN', 'OPERATOR']),
@@ -1103,21 +1187,334 @@ const initializeRoutes = (prisma: PrismaClient) => {
     renewalController.createRenewal,
   );
   
+  /**
+   * @swagger
+   * /renewals:
+   *   get:
+   *     tags: [违约重生管理]
+   *     summary: 查询重生申请列表
+   *     description: 获取重生申请的分页列表，支持条件查询。OPERATOR只能查看自己提交的申请。
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: 页码
+   *       - in: query
+   *         name: size
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 10
+   *         description: 每页大小
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *           enum: [PENDING, APPROVED, REJECTED]
+   *         description: 申请状态
+   *       - in: query
+   *         name: customerName
+   *         schema:
+   *           type: string
+   *         description: 客户名称（模糊查询）
+   *       - in: query
+   *         name: applicant
+   *         schema:
+   *           type: string
+   *         description: 申请人
+   *       - in: query
+   *         name: startTime
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *         description: 开始时间
+   *       - in: query
+   *         name: endTime
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *         description: 结束时间
+   *     responses:
+   *       200:
+   *         description: 查询成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     list:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           renewalId:
+   *                             type: string
+   *                           customerId:
+   *                             type: number
+   *                           customerName:
+   *                             type: string
+   *                           renewalReason:
+   *                             type: object
+   *                             properties:
+   *                               id:
+   *                                 type: number
+   *                               reason:
+   *                                 type: string
+   *                           status:
+   *                             type: string
+   *                             enum: [PENDING, APPROVED, REJECTED]
+   *                           remark:
+   *                             type: string
+   *                           applicant:
+   *                             type: string
+   *                           createTime:
+   *                             type: string
+   *                             format: date-time
+   *                           approver:
+   *                             type: string
+   *                           approveTime:
+   *                             type: string
+   *                             format: date-time
+   *                           approveRemark:
+   *                             type: string
+   *       401:
+   *         description: 未授权
+   */
   router.get('/renewals',
     authenticateToken,
+    validateQuery(renewalValidation.query),
     renewalController.getRenewals,
   );
   
+  /**
+   * @swagger
+   * /renewals/{renewalId}:
+   *   get:
+   *     tags: [违约重生管理]
+   *     summary: 获取重生申请详情
+   *     description: 根据申请ID获取详细信息。OPERATOR只能查看自己提交的申请。
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: renewalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: 重生申请ID
+   *     responses:
+   *       200:
+   *         description: 查询成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 renewalId:
+   *                   type: string
+   *                 customerId:
+   *                   type: number
+   *                 customerName:
+   *                   type: string
+   *                 customerInfo:
+   *                   type: object
+   *                   properties:
+   *                     industry:
+   *                       type: string
+   *                     region:
+   *                       type: string
+   *                     latestExternalRating:
+   *                       type: string
+   *                 renewalReason:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: number
+   *                     reason:
+   *                       type: string
+   *                 originalDefaultReasons:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: number
+   *                       reason:
+   *                         type: string
+   *                 status:
+   *                   type: string
+   *                   enum: [PENDING, APPROVED, REJECTED]
+   *                 remark:
+   *                   type: string
+   *                 applicant:
+   *                   type: string
+   *                 createTime:
+   *                   type: string
+   *                   format: date-time
+   *                 approver:
+   *                   type: string
+   *                 approveTime:
+   *                   type: string
+   *                   format: date-time
+   *                 approveRemark:
+   *                   type: string
+   *       401:
+   *         description: 未授权
+   *       403:
+   *         description: 权限不足
+   *       404:
+   *         description: 申请不存在
+   */
   router.get('/renewals/:renewalId',
     authenticateToken,
     renewalController.getRenewalDetail,
   );
   
+  /**
+   * @swagger
+   * /renewals/{renewalId}/approve:
+   *   post:
+   *     tags: [违约重生管理]
+   *     summary: 审核重生申请
+   *     description: 审核单个违约重生申请，只有ADMIN和AUDITOR可以审核
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: renewalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: 重生申请ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - approved
+   *             properties:
+   *               approved:
+   *                 type: boolean
+   *                 description: 是否审核通过
+   *               remark:
+   *                 type: string
+   *                 maxLength: 1000
+   *                 description: 审核备注
+   *     responses:
+   *       200:
+   *         description: 审核成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 renewalId:
+   *                   type: string
+   *                 status:
+   *                   type: string
+   *                   enum: [APPROVED, REJECTED]
+   *                 approver:
+   *                   type: string
+   *                 approveTime:
+   *                   type: string
+   *                   format: date-time
+   *       401:
+   *         description: 未授权
+   *       403:
+   *         description: 权限不足
+   *       404:
+   *         description: 申请不存在
+   */
   router.post('/renewals/:renewalId/approve',
     authenticateToken,
     requireRole(['ADMIN', 'AUDITOR']),
     validate(renewalValidation.approve),
     renewalController.approveRenewal,
+  );
+
+  /**
+   * @swagger
+   * /renewals/batch-approve:
+   *   post:
+   *     tags: [违约重生管理]
+   *     summary: 批量审核重生申请
+   *     description: 批量审核多个违约重生申请，只有ADMIN和AUDITOR可以审核
+   *     security:
+   *       - BearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - renewals
+   *             properties:
+   *               renewals:
+   *                 type: array
+   *                 minItems: 1
+   *                 maxItems: 100
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - renewalId
+   *                     - approved
+   *                   properties:
+   *                     renewalId:
+   *                       type: string
+   *                       description: 重生申请ID
+   *                     approved:
+   *                       type: boolean
+   *                       description: 是否审核通过
+   *                     remark:
+   *                       type: string
+   *                       maxLength: 1000
+   *                       description: 审核备注
+   *     responses:
+   *       200:
+   *         description: 批量审核完成
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 successCount:
+   *                   type: number
+   *                   description: 成功处理数量
+   *                 failCount:
+   *                   type: number
+   *                   description: 失败处理数量
+   *                 details:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       renewalId:
+   *                         type: string
+   *                       success:
+   *                         type: boolean
+   *                       message:
+   *                         type: string
+   *       401:
+   *         description: 未授权
+   *       403:
+   *         description: 权限不足
+   */
+  router.post('/renewals/batch-approve',
+    authenticateToken,
+    requireRole(['ADMIN', 'AUDITOR']),
+    validate(renewalValidation.batchApprove),
+    renewalController.batchApproveRenewals,
   );
 
   // TODO: 文件上传路由

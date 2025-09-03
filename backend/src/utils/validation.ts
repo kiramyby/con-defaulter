@@ -82,20 +82,32 @@ export const defaultApplicationValidation = {
 // 重生申请验证
 export const renewalValidation = {
   create: z.object({
-    customerId: z.number().int().positive(),
-    renewalReason: z.number().int().positive(),
-    remark: z.string().optional(),
+    customerId: z.number().int().positive('客户ID必须为正整数'),
+    renewalReason: z.number().int().positive('重生原因ID必须为正整数'),
+    remark: z.string().max(1000, '备注不能超过1000个字符').optional(),
   }),
 
   approve: z.object({
-    approved: z.boolean(),
-    remark: z.string().optional(),
+    approved: z.boolean('审核结果必须为布尔值'),
+    remark: z.string().max(1000, '审核备注不能超过1000个字符').optional(),
+  }),
+
+  batchApprove: z.object({
+    renewals: z.array(z.object({
+      renewalId: z.string().min(1, '重生申请ID不能为空'),
+      approved: z.boolean('审核结果必须为布尔值'),
+      remark: z.string().max(1000, '审核备注不能超过1000个字符').optional(),
+    })).min(1, '至少需要审核一个申请').max(100, '单次最多审核100个申请'),
   }),
 
   query: z.object({
     page: z.number().int().min(1).default(1),
     size: z.number().int().min(1).max(100).default(10),
-    customerName: z.string().optional(),
+    status: commonValidation.renewalStatus.optional(),
+    customerName: z.string().max(255).optional(),
+    applicant: z.string().max(255).optional(),
+    startTime: commonValidation.dateString,
+    endTime: commonValidation.dateString,
   }),
 };
 
@@ -205,7 +217,7 @@ export const validateQuery = (schema: z.ZodSchema) => {
       const query = { ...req.query };
       
       // 数字类型转换
-      ['page', 'size', 'year', 'startYear', 'endYear', 'customerId', 'renewalReason'].forEach(key => {
+      ['page', 'size', 'year', 'startYear', 'endYear', 'customerId', 'renewalReason', 'renewalReasonId'].forEach(key => {
         if (query[key] && !isNaN(Number(query[key]))) {
           query[key] = Number(query[key]);
         }

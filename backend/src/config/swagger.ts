@@ -49,7 +49,7 @@ const options: swaggerJsdoc.Options = {
             status: { 
               type: 'string', 
               enum: ['PENDING', 'APPROVED', 'REJECTED'],
-              description: '申请状态' 
+              description: '申请状态',
             },
             severity: {
               type: 'string',
@@ -85,6 +85,85 @@ const options: swaggerJsdoc.Options = {
             applicationTime: { type: 'string', format: 'date-time', description: '申请时间' },
             approveTime: { type: 'string', format: 'date-time', description: '审核时间' },
             latestExternalRating: { type: 'string', description: '最新外部评级' },
+          },
+        },
+        RenewalReason: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', description: '重生原因ID' },
+            reason: { type: 'string', description: '重生原因名称' },
+            enabled: { type: 'boolean', description: '是否启用' },
+          },
+        },
+        Renewal: {
+          type: 'object',
+          properties: {
+            renewalId: { type: 'string', description: '重生申请ID' },
+            customerId: { type: 'number', description: '客户ID' },
+            customerName: { type: 'string', description: '客户名称' },
+            renewalReason: {
+              type: 'object',
+              properties: {
+                id: { type: 'number', description: '重生原因ID' },
+                reason: { type: 'string', description: '重生原因名称' },
+              },
+            },
+            status: { 
+              type: 'string', 
+              enum: ['PENDING', 'APPROVED', 'REJECTED'],
+              description: '申请状态',
+            },
+            remark: { type: 'string', description: '申请备注' },
+            applicant: { type: 'string', description: '申请人' },
+            createTime: { type: 'string', format: 'date-time', description: '创建时间' },
+            approver: { type: 'string', description: '审核人' },
+            approveTime: { type: 'string', format: 'date-time', description: '审核时间' },
+            approveRemark: { type: 'string', description: '审核备注' },
+          },
+        },
+        RenewalDetail: {
+          type: 'object',
+          properties: {
+            renewalId: { type: 'string', description: '重生申请ID' },
+            customerId: { type: 'number', description: '客户ID' },
+            customerName: { type: 'string', description: '客户名称' },
+            customerInfo: {
+              type: 'object',
+              properties: {
+                industry: { type: 'string', description: '行业' },
+                region: { type: 'string', description: '地区' },
+                latestExternalRating: { type: 'string', description: '最新外部评级' },
+              },
+            },
+            renewalReason: {
+              type: 'object',
+              properties: {
+                id: { type: 'number', description: '重生原因ID' },
+                reason: { type: 'string', description: '重生原因名称' },
+              },
+            },
+            originalDefaultReasons: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'number', description: '违约原因ID' },
+                  reason: { type: 'string', description: '违约原因名称' },
+                },
+              },
+              description: '原违约原因列表',
+            },
+            status: { 
+              type: 'string', 
+              enum: ['PENDING', 'APPROVED', 'REJECTED'],
+              description: '申请状态',
+            },
+            remark: { type: 'string', description: '申请备注' },
+            applicant: { type: 'string', description: '申请人' },
+            createTime: { type: 'string', format: 'date-time', description: '创建时间' },
+            approver: { type: 'string', description: '审核人' },
+            approveTime: { type: 'string', format: 'date-time', description: '审核时间' },
+            approveRemark: { type: 'string', description: '审核备注' },
           },
         },
         Error: {

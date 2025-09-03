@@ -120,14 +120,53 @@ export interface RenewalDto {
   renewalId: string;
   customerId: number;
   customerName: string;
+  renewalReason: {
+    id: number;
+    reason: string;
+  };
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  remark?: string;
+  applicant: string;
   createTime: string;
+  approver?: string;
+  approveTime?: string;
+  approveRemark?: string;
+  customer?: {
+    industry?: string;
+    region?: string;
+  };
 }
 
 export interface CreateRenewalDto {
   customerId: number;
   renewalReason: number;
   remark?: string;
+}
+
+export interface RenewalDetailDto {
+  renewalId: string;
+  customerId: number;
+  customerName: string;
+  customerInfo: {
+    industry?: string;
+    region?: string;
+    latestExternalRating?: string;
+  };
+  renewalReason: {
+    id: number;
+    reason: string;
+  };
+  originalDefaultReasons: Array<{
+    id: number;
+    reason: string;
+  }>;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  remark?: string;
+  applicant: string;
+  createTime: string;
+  approver?: string;
+  approveTime?: string;
+  approveRemark?: string;
 }
 
 export interface RenewalReasonDto {
@@ -139,6 +178,34 @@ export interface RenewalReasonDto {
 export interface ApproveRenewalDto {
   approved: boolean;
   remark?: string;
+}
+
+export interface BatchApproveRenewalDto {
+  renewals: Array<{
+    renewalId: string;
+    approved: boolean;
+    remark?: string;
+  }>;
+}
+
+export interface BatchApproveRenewalResultDto {
+  successCount: number;
+  failCount: number;
+  details: Array<{
+    renewalId: string;
+    success: boolean;
+    message: string;
+  }>;
+}
+
+export interface RenewalQueryParams {
+  page?: number;
+  size?: number;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  customerName?: string;
+  applicant?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 // 统计相关

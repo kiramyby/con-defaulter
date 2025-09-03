@@ -146,6 +146,9 @@ export class RenewalService {
     size: number = 10,
     status?: RenewalStatus,
     customerName?: string,
+    applicant?: string,
+    userRole?: string,
+    currentUser?: string,
   ) {
     const skip = (page - 1) * size;
 
@@ -153,6 +156,13 @@ export class RenewalService {
     
     if (status) where.status = status;
     if (customerName) where.customerName = { contains: customerName, mode: 'insensitive' };
+    
+    // 权限控制：OPERATOR只能查看自己提交的申请
+    if (userRole === 'OPERATOR' && currentUser) {
+      where.applicant = currentUser;
+    } else if (applicant) {
+      where.applicant = applicant;
+    }
 
     const [total, renewals] = await Promise.all([
       this.prisma.renewal.count({ where }),
@@ -160,6 +170,12 @@ export class RenewalService {
         where,
         include: {
           renewalReason: true,
+          customer: {
+            select: {
+              industry: true,
+              region: true,
+            }
+          }
         },
         orderBy: { createTime: 'desc' },
         skip,
@@ -175,7 +191,10 @@ export class RenewalService {
         renewalId: renewal.renewalId,
         customerId: Number(renewal.customerId),
         customerName: renewal.customerName,
-        renewalReason: renewal.renewalReason.reason,
+        renewalReason: {
+          id: Number(renewal.renewalReason.id),
+          reason: renewal.renewalReason.reason,
+        },
         status: renewal.status,
         remark: renewal.remark,
         applicant: renewal.applicant,
@@ -183,6 +202,10 @@ export class RenewalService {
         approver: renewal.approver,
         approveTime: renewal.approveTime?.toISOString(),
         approveRemark: renewal.approveRemark,
+        customer: {
+          industry: renewal.customer?.industry,
+          region: renewal.customer?.region,
+        }
       })),
     };
   }
@@ -190,12 +213,25 @@ export class RenewalService {
   /**
    * 获取重生申请详情
    */
-  async getRenewalDetail(renewalId: string) {
+  async getRenewalDetail(renewalId: string, userRole?: string, currentUser?: string) {
     const renewal = await this.prisma.renewal.findUnique({
       where: { renewalId },
       include: {
         renewalReason: true,
-        customer: true,
+        customer: {
+          include: {
+            defaultCustomer: {
+              where: { isActive: true },
+              include: {
+                defaultReasons: {
+                  include: {
+                    reason: true
+                  }
+                }
+              }
+            }
+          }
+        },
       },
     });
 
@@ -203,14 +239,28 @@ export class RenewalService {
       return null;
     }
 
+    // 权限检查：OPERATOR只能查看自己提交的申请
+    if (userRole === 'OPERATOR' && renewal.applicant !== currentUser) {
+      throw new Error('无权限查看此申请');
+    }
+
     return {
       renewalId: renewal.renewalId,
       customerId: Number(renewal.customerId),
       customerName: renewal.customerName,
+      customerInfo: {
+        industry: renewal.customer?.industry,
+        region: renewal.customer?.region,
+        latestExternalRating: renewal.customer?.defaultCustomer?.[0]?.latestExternalRating,
+      },
       renewalReason: {
         id: Number(renewal.renewalReason.id),
         reason: renewal.renewalReason.reason,
       },
+      originalDefaultReasons: renewal.customer?.defaultCustomer?.[0]?.defaultReasons?.map(dr => ({
+        id: Number(dr.reason.id),
+        reason: dr.reason.reason,
+      })) || [],
       status: renewal.status,
       remark: renewal.remark,
       applicant: renewal.applicant,
@@ -218,6 +268,69 @@ export class RenewalService {
       approver: renewal.approver,
       approveTime: renewal.approveTime?.toISOString(),
       approveRemark: renewal.approveRemark,
+    };
+  }
+
+  /**
+   * 批量审核重生申请
+   */
+  async batchApproveRenewals(
+    approvals: Array<{
+      renewalId: string;
+      approved: boolean;
+      remark?: string;
+    }>,
+    approver: string,
+  ): Promise<{
+    successCount: number;
+    failCount: number;
+    details: Array<{
+      renewalId: string;
+      success: boolean;
+      message: string;
+    }>;
+  }> {
+    const results = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const approval of approvals) {
+      try {
+        const success = await this.approveRenewal(
+          approval.renewalId,
+          { approved: approval.approved, remark: approval.remark },
+          approver
+        );
+
+        if (success) {
+          successCount++;
+          results.push({
+            renewalId: approval.renewalId,
+            success: true,
+            message: approval.approved ? '审核通过' : '审核拒绝',
+          });
+        } else {
+          failCount++;
+          results.push({
+            renewalId: approval.renewalId,
+            success: false,
+            message: '申请不存在',
+          });
+        }
+      } catch (error: any) {
+        failCount++;
+        results.push({
+          renewalId: approval.renewalId,
+          success: false,
+          message: error.message || '审核失败',
+        });
+      }
+    }
+
+    return {
+      successCount,
+      failCount,
+      details: results,
     };
   }
 }
