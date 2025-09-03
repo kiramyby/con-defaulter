@@ -166,6 +166,31 @@ const options: swaggerJsdoc.Options = {
             approveRemark: { type: 'string', description: '审核备注' },
           },
         },
+        User: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', description: '用户ID' },
+            username: { type: 'string', description: '用户名' },
+            realName: { type: 'string', description: '真实姓名' },
+            email: { type: 'string', format: 'email', description: '邮箱地址' },
+            phone: { type: 'string', description: '手机号码' },
+            role: { 
+              type: 'string', 
+              enum: ['ADMIN', 'OPERATOR', 'AUDITOR'],
+              description: '用户角色',
+            },
+            status: { 
+              type: 'string', 
+              enum: ['ACTIVE', 'INACTIVE'],
+              description: '用户状态',
+            },
+            department: { type: 'string', description: '部门' },
+            createTime: { type: 'string', format: 'date-time', description: '创建时间' },
+            updateTime: { type: 'string', format: 'date-time', description: '更新时间' },
+            lastLoginTime: { type: 'string', format: 'date-time', description: '最后登录时间' },
+            createdBy: { type: 'string', description: '创建人' },
+          },
+        },
         Error: {
           type: 'object',
           properties: {
@@ -197,6 +222,10 @@ const options: swaggerJsdoc.Options = {
       {
         name: '认证管理',
         description: '用户登录、登出、令牌管理等认证相关接口',
+      },
+      {
+        name: '用户管理',
+        description: '系统用户的查询和管理',
       },
       {
         name: '违约原因管理',

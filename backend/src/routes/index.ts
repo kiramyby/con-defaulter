@@ -21,7 +21,8 @@ import {
   authValidation,
   defaultReasonValidation, 
   defaultApplicationValidation,
-  renewalValidation, 
+  renewalValidation,
+  userManagementValidation,
 } from '../utils/validation';
 
 // Middleware
@@ -313,6 +314,174 @@ const initializeRoutes = (prisma: PrismaClient) => {
     requireRole(['ADMIN']),
     validate(authValidation.register),
     authController.register,
+  );
+
+  // ==================== 用户管理路由 ====================
+  
+  /**
+   * @swagger
+   * /users:
+   *   get:
+   *     tags: [用户管理]
+   *     summary: 获取用户列表
+   *     description: 获取系统中所有用户的分页列表，支持条件查询。仅限ADMIN权限。
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: 页码
+   *       - in: query
+   *         name: size
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 10
+   *         description: 每页大小
+   *       - in: query
+   *         name: role
+   *         schema:
+   *           type: string
+   *           enum: [ADMIN, OPERATOR, AUDITOR]
+   *         description: 用户角色
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *           enum: [ACTIVE, INACTIVE]
+   *         description: 用户状态
+   *       - in: query
+   *         name: keyword
+   *         schema:
+   *           type: string
+   *         description: 关键字搜索（用户名、姓名、邮箱、部门）
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     list:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/User'
+   *       401:
+   *         description: 未登录
+   *       403:
+   *         description: 权限不足
+   */
+  router.get('/users',
+    authenticateToken,
+    requireRole(['ADMIN']),
+    validateQuery(userManagementValidation.getAllUsers),
+    authController.getAllUsers,
+  );
+
+  /**
+   * @swagger
+   * /users/{userId}:
+   *   get:
+   *     tags: [用户管理]
+   *     summary: 获取用户详情
+   *     description: 根据用户ID获取用户详细信息。仅限ADMIN权限。
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: 用户ID
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       400:
+   *         description: 用户ID无效
+   *       401:
+   *         description: 未登录
+   *       403:
+   *         description: 权限不足
+   *       404:
+   *         description: 用户不存在
+   */
+  router.get('/users/:userId',
+    authenticateToken,
+    requireRole(['ADMIN']),
+    authController.getUserById,
+  );
+
+  /**
+   * @swagger
+   * /users/{userId}/status:
+   *   put:
+   *     tags: [用户管理]
+   *     summary: 更新用户状态
+   *     description: 更新指定用户的状态（启用/禁用）。仅限ADMIN权限。
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: 用户ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - status
+   *             properties:
+   *               status:
+   *                 type: string
+   *                 enum: [ACTIVE, INACTIVE]
+   *                 description: 用户状态
+   *     responses:
+   *       200:
+   *         description: 更新成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 id:
+   *                   type: number
+   *                 username:
+   *                   type: string
+   *                 status:
+   *                   type: string
+   *                   enum: [ACTIVE, INACTIVE]
+   *       400:
+   *         description: 参数错误
+   *       401:
+   *         description: 未登录
+   *       403:
+   *         description: 权限不足
+   *       404:
+   *         description: 用户不存在
+   */
+  router.put('/users/:userId/status',
+    authenticateToken,
+    requireRole(['ADMIN']),
+    validate(userManagementValidation.updateUserStatus),
+    authController.updateUserStatus,
   );
 
   // ==================== 违约原因管理路由 ====================

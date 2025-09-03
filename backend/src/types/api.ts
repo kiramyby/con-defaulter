@@ -297,3 +297,31 @@ export interface TrendQueryParams {
   startYear?: number;
   endYear?: number;
 }
+
+// 用户管理相关
+export interface UserDto {
+  id: number;
+  username: string;
+  realName: string;
+  email: string;
+  phone?: string;
+  role: 'ADMIN' | 'OPERATOR' | 'AUDITOR';
+  status: 'ACTIVE' | 'INACTIVE';
+  department?: string;
+  createTime: string;
+  updateTime: string;
+  lastLoginTime?: string;
+  createdBy: string;
+}
+
+export interface UserQueryParams {
+  page?: number;
+  size?: number;
+  role?: 'ADMIN' | 'OPERATOR' | 'AUDITOR';
+  status?: 'ACTIVE' | 'INACTIVE';
+  keyword?: string;
+}
+
+export interface UpdateUserStatusDto {
+  status: 'ACTIVE' | 'INACTIVE';
+}

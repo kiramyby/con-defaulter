@@ -232,6 +232,237 @@ export class AuthController {
   };
 
   /**
+   * 获取所有用户信息（仅限ADMIN）
+   * GET /api/v1/users
+   */
+  getAllUsers = async (req: Request, res: Response) => {
+    try {
+      const { page = 1, size = 10, role, status, keyword } = req.query as any;
+
+      const skip = (parseInt(page) - 1) * parseInt(size);
+      const take = parseInt(size);
+
+      // 构建查询条件
+      const where: any = {};
+      
+      if (role) where.role = role;
+      if (status) where.status = status;
+      if (keyword) {
+        where.OR = [
+          { username: { contains: keyword, mode: 'insensitive' } },
+          { realName: { contains: keyword, mode: 'insensitive' } },
+          { email: { contains: keyword, mode: 'insensitive' } },
+          { department: { contains: keyword, mode: 'insensitive' } },
+        ];
+      }
+
+      const [total, users] = await Promise.all([
+        this.prisma.user.count({ where }),
+        this.prisma.user.findMany({
+          where,
+          select: {
+            id: true,
+            username: true,
+            realName: true,
+            email: true,
+            phone: true,
+            role: true,
+            status: true,
+            department: true,
+            createTime: true,
+            updateTime: true,
+            lastLoginTime: true,
+            createdBy: true,
+          },
+          orderBy: { createTime: 'desc' },
+          skip,
+          take,
+        }),
+      ]);
+
+      // 记录操作日志
+      await this.prisma.operationLog.create({
+        data: {
+          username: req.user?.username || 'system',
+          operationType: 'VIEW',
+          businessType: 'USER_MANAGEMENT',
+          operationDesc: '查看用户列表',
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+        },
+      });
+
+      const result = {
+        total,
+        page: parseInt(page),
+        size: parseInt(size),
+        list: users.map(user => ({
+          id: Number(user.id),
+          username: user.username,
+          realName: user.realName,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          status: user.status,
+          department: user.department,
+          createTime: user.createTime.toISOString(),
+          updateTime: user.updateTime.toISOString(),
+          lastLoginTime: user.lastLoginTime?.toISOString(),
+          createdBy: user.createdBy,
+        })),
+      };
+
+      logger.info(`管理员查看用户列表: ${req.user?.username}, 返回${users.length}条记录`);
+
+      return ResponseUtil.success(res, result, '获取用户列表成功');
+    } catch (error: any) {
+      logger.error('获取用户列表失败:', error);
+      return ResponseUtil.internalError(res, '获取用户列表服务异常');
+    }
+  };
+
+  /**
+   * 获取指定用户详情（仅限ADMIN）
+   * GET /api/v1/users/:userId
+   */
+  getUserById = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId || isNaN(Number(userId))) {
+        return ResponseUtil.badRequest(res, '用户ID无效');
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: BigInt(userId) },
+        select: {
+          id: true,
+          username: true,
+          realName: true,
+          email: true,
+          phone: true,
+          role: true,
+          status: true,
+          department: true,
+          createTime: true,
+          updateTime: true,
+          lastLoginTime: true,
+          createdBy: true,
+        },
+      });
+
+      if (!user) {
+        return ResponseUtil.notFound(res, '用户不存在');
+      }
+
+      // 记录操作日志
+      await this.prisma.operationLog.create({
+        data: {
+          username: req.user?.username || 'system',
+          operationType: 'VIEW',
+          businessType: 'USER_MANAGEMENT',
+          operationDesc: `查看用户详情: ${user.username}`,
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+        },
+      });
+
+      const result = {
+        id: Number(user.id),
+        username: user.username,
+        realName: user.realName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+        department: user.department,
+        createTime: user.createTime.toISOString(),
+        updateTime: user.updateTime.toISOString(),
+        lastLoginTime: user.lastLoginTime?.toISOString(),
+        createdBy: user.createdBy,
+      };
+
+      logger.info(`管理员查看用户详情: ${req.user?.username} -> ${user.username}`);
+
+      return ResponseUtil.success(res, result, '获取用户详情成功');
+    } catch (error: any) {
+      logger.error('获取用户详情失败:', error);
+      return ResponseUtil.internalError(res, '获取用户详情服务异常');
+    }
+  };
+
+  /**
+   * 更新用户状态（仅限ADMIN）
+   * PUT /api/v1/users/:userId/status
+   */
+  updateUserStatus = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { status } = req.body;
+
+      if (!userId || isNaN(Number(userId))) {
+        return ResponseUtil.badRequest(res, '用户ID无效');
+      }
+
+      if (!['ACTIVE', 'INACTIVE'].includes(status)) {
+        return ResponseUtil.badRequest(res, '用户状态无效');
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: BigInt(userId) },
+        select: { username: true, status: true, role: true },
+      });
+
+      if (!user) {
+        return ResponseUtil.notFound(res, '用户不存在');
+      }
+
+      // 不能禁用自己
+      if (req.user?.username === user.username && status === 'INACTIVE') {
+        return ResponseUtil.badRequest(res, '不能禁用自己的账号');
+      }
+
+      // 不能禁用其他管理员（除非是超级管理员）
+      if (user.role === 'ADMIN' && status === 'INACTIVE' && req.user?.role !== 'SUPER_ADMIN') {
+        return ResponseUtil.forbidden(res, '无权限禁用其他管理员账号');
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id: BigInt(userId) },
+        data: { status },
+        select: {
+          id: true,
+          username: true,
+          status: true,
+        },
+      });
+
+      // 记录操作日志
+      await this.prisma.operationLog.create({
+        data: {
+          username: req.user?.username || 'system',
+          operationType: 'UPDATE',
+          businessType: 'USER_MANAGEMENT',
+          operationDesc: `更新用户状态: ${user.username} -> ${status}`,
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+        },
+      });
+
+      logger.info(`更新用户状态: ${user.username} -> ${status} by ${req.user?.username}`);
+
+      return ResponseUtil.success(res, {
+        id: Number(updatedUser.id),
+        username: updatedUser.username,
+        status: updatedUser.status,
+      }, '更新用户状态成功');
+    } catch (error: any) {
+      logger.error('更新用户状态失败:', error);
+      return ResponseUtil.internalError(res, '更新用户状态服务异常');
+    }
+  };
+
+  /**
    * 用户注册（仅限ADMIN创建）
    */
   register = async (req: Request, res: Response) => {

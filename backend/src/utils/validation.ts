@@ -169,6 +169,29 @@ export const authValidation = {
   }),
 };
 
+// 用户管理验证
+export const userManagementValidation = {
+  getAllUsers: z.object({
+    page: z.number().int().min(1).default(1),
+    size: z.number().int().min(1).max(100).default(10),
+    role: z.enum(['ADMIN', 'OPERATOR', 'AUDITOR']).optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    keyword: z.string().max(255).optional(),
+  }),
+
+  updateUserStatus: z.object({
+    status: z.enum(['ACTIVE', 'INACTIVE'], {
+      errorMap: () => ({ message: '用户状态必须是ACTIVE或INACTIVE' })
+    }),
+  }),
+
+  getUserById: z.object({
+    userId: z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, {
+      message: '用户ID必须是正整数',
+    }),
+  }),
+};
+
 // 文件上传验证
 export const fileValidation = {
   upload: z.object({
@@ -217,7 +240,7 @@ export const validateQuery = (schema: z.ZodSchema) => {
       const query = { ...req.query };
       
       // 数字类型转换
-      ['page', 'size', 'year', 'startYear', 'endYear', 'customerId', 'renewalReason', 'renewalReasonId'].forEach(key => {
+      ['page', 'size', 'year', 'startYear', 'endYear', 'customerId', 'renewalReason', 'renewalReasonId', 'userId'].forEach(key => {
         if (query[key] && !isNaN(Number(query[key]))) {
           query[key] = Number(query[key]);
         }
