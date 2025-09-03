@@ -37,6 +37,12 @@ export class DefaultCustomerController {
     try {
       const params = req.query as any;
       
+      // 应用数据级别权限控制
+      const dataAccess = req.checkDataAccess;
+      if (dataAccess) {
+        params.dataAccess = dataAccess;
+      }
+      
       const data = await this.customerService.exportDefaultCustomers(params);
       
       // 设置响应头为Excel格式

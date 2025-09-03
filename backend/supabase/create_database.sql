@@ -1,6 +1,5 @@
 -- 违约客户管理系统数据库创建脚本
 -- 适用于 Supabase PostgreSQL 数据库
--- 创建时间: 2024-02-11
 
 -- 1. 违约原因表 (default_reasons)
 CREATE TABLE default_reasons (

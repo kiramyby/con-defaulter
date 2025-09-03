@@ -2,12 +2,14 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import swaggerUi from 'swagger-ui-express';
 import { PrismaClient } from '@prisma/client';
 
 import { config } from './config/env';
 import { connectDatabase } from './config/database';
 import { initializeRoutes } from './routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { specs } from './config/swagger';
 import logger from './config/logger';
 
 class App {
@@ -90,8 +92,16 @@ class App {
       });
     });
 
-    // API文档路由（后续可添加Swagger）
-    // this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    // Service Worker 处理 - 避免404错误
+    this.app.get('/sw.js', (req, res) => {
+      res.status(204).end(); // 返回204 No Content，避免404错误
+    });
+
+    // API文档路由
+    this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: "违约客户管理系统 API文档"
+    }));
   }
 
   private initializeErrorHandling(): void {
@@ -113,7 +123,7 @@ class App {
         logger.info(`📦 环境: ${config.NODE_ENV}`);
         logger.info(`🌐 端口: ${config.PORT}`);
         logger.info(`🔗 URL: http://localhost:${config.PORT}`);
-        logger.info(`📚 API文档: http://localhost:${config.PORT}/api/v1/health`);
+        logger.info(`📚 API文档: http://localhost:${config.PORT}/api-docs`);
       });
 
     } catch (error) {

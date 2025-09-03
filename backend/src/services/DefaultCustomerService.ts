@@ -75,7 +75,7 @@ export class DefaultCustomerService {
    * 导出违约客户列表
    * 返回用于导出Excel的数据
    */
-  async exportDefaultCustomers(params: DefaultCustomerQueryParams): Promise<Array<{
+  async exportDefaultCustomers(params: DefaultCustomerQueryParams & { dataAccess?: any }): Promise<Array<{
     客户ID: number;
     客户名称: string;
     状态: string;
@@ -86,6 +86,7 @@ export class DefaultCustomerService {
     审核时间: string;
     最新外部评级: string;
   }>> {
+    const { dataAccess } = params;
     const where: any = {
       isActive: true,
     };
@@ -96,6 +97,14 @@ export class DefaultCustomerService {
       where.applicationTime = {};
       if (params.startTime) where.applicationTime.gte = new Date(params.startTime);
       if (params.endTime) where.applicationTime.lte = new Date(params.endTime);
+    }
+
+    // 应用数据级别权限控制
+    if (dataAccess && dataAccess.checkOwnership) {
+      if (dataAccess.role === 'OPERATOR') {
+        // 操作员只能导出自己申请的违约客户
+        where.applicant = dataAccess.username;
+      }
     }
 
     const customers = await this.prisma.defaultCustomer.findMany({

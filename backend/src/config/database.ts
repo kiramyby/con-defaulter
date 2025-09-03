@@ -4,27 +4,37 @@ import logger from './logger';
 // 创建 Prisma 客户端实例
 const prisma = new PrismaClient({
   log: [
-    { level: 'query', emit: 'event' },
     { level: 'error', emit: 'stdout' },
     { level: 'warn', emit: 'stdout' },
   ],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
 });
 
-// 监听查询日志
-prisma.$on('query', (e) => {
-  logger.debug('Query: ' + e.query);
-  logger.debug('Params: ' + e.params);
-  logger.debug('Duration: ' + e.duration + 'ms');
-});
 
-// 数据库连接函数
-export const connectDatabase = async (): Promise<void> => {
-  try {
-    await prisma.$connect();
-    logger.info('数据库连接成功');
-  } catch (error) {
-    logger.error('数据库连接失败:', error);
-    process.exit(1);
+// 数据库连接函数（带重试机制）
+export const connectDatabase = async (retries = 3): Promise<void> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await prisma.$connect();
+      // 测试连接
+      await prisma.$queryRaw`SELECT 1`;
+      logger.info('数据库连接成功');
+      return;
+    } catch (error) {
+      logger.warn(`数据库连接尝试 ${i + 1}/${retries} 失败:`, error);
+      
+      if (i === retries - 1) {
+        logger.error('所有数据库连接尝试都失败了');
+        process.exit(1);
+      }
+      
+      // 等待后重试
+      await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+    }
   }
 };
 
@@ -50,6 +60,33 @@ process.on('SIGINT', async () => {
   await disconnectDatabase();
   process.exit(0);
 });
+
+// 连接健康检查
+export const checkDatabaseHealth = async (): Promise<boolean> => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch (error) {
+    logger.error('数据库健康检查失败:', error);
+    return false;
+  }
+};
+
+// 定期健康检查（每5分钟）
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(async () => {
+    const isHealthy = await checkDatabaseHealth();
+    if (!isHealthy) {
+      logger.warn('数据库连接不健康，尝试重新连接...');
+      try {
+        await prisma.$disconnect();
+        await connectDatabase();
+      } catch (error) {
+        logger.error('重新连接失败:', error);
+      }
+    }
+  }, 5 * 60 * 1000); // 5分钟检查一次
+}
 
 export { prisma };
 export default prisma;

@@ -1,14 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { createClient } from '@supabase/supabase-js';
-import { SupabaseClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
+import { config } from '../config/env';
+import logger from '../config/logger';
 
-// 创建Supabase客户端实例
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
-
-export const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-
-// JWT认证中间件
+// JWT认证中间件（简化版）
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -22,61 +17,41 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   }
 
   try {
-    // 验证JWT token
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    // 验证JWT token并获取用户信息
+    const decoded = jwt.verify(token, config.JWT_SECRET) as any;
     
-    if (error || !user) {
-      return res.status(403).json({ 
-        code: 403,
-        message: '无效的token或token已过期',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // 获取用户详细信息（从数据库users表中）
-    const { data: dbUser, error: dbError } = await supabaseAdmin
-      .from('users')
-      .select('id, username, real_name, role, status, department')
-      .eq('email', user.email)
-      .eq('status', 'ACTIVE') // 只允许活跃用户
-      .single();
-
-    if (dbError || !dbUser) {
-      console.error('查询用户数据库失败:', dbError);
-      return res.status(404).json({ 
-        code: 404,
-        message: '用户不存在或已被禁用',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // 将完整用户信息添加到请求对象中
+    // 直接使用JWT中的用户信息，无需每次查询数据库
     req.user = {
-      id: user.id,
-      email: user.email,
-      dbId: dbUser.id,
-      username: dbUser.username,
-      realName: dbUser.real_name,
-      role: dbUser.role,
-      status: dbUser.status,
-      department: dbUser.department
+      id: decoded.id,
+      email: decoded.email,
+      dbId: decoded.dbId,
+      username: decoded.username,
+      realName: decoded.realName,
+      role: decoded.role,
+      status: decoded.status,
+      department: decoded.department
     };
-
-    // 记录用户访问日志（异步）
-    setImmediate(() => {
-      supabaseAdmin.from('operation_logs').insert({
-        username: dbUser.username,
-        operation_type: 'ACCESS',
-        business_type: 'SYSTEM',
-        operation_desc: `用户访问API: ${req.method} ${req.path}`,
-        ip_address: req.ip || req.connection.remoteAddress,
-        user_agent: req.get('User-Agent'),
-      }).then().catch(console.error);
-    });
 
     next();
   } catch (error) {
-    console.error('认证错误:', error);
+    logger.error('认证错误:', error);
+    
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(403).json({ 
+        code: 403,
+        message: '无效的token',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(403).json({ 
+        code: 403,
+        message: 'token已过期',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     res.status(500).json({ 
       code: 500,
       message: '认证服务错误',
@@ -97,18 +72,8 @@ export const requireRole = (allowedRoles: ('ADMIN' | 'OPERATOR' | 'AUDITOR')[]) 
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      // 记录权限访问失败日志
-      setImmediate(() => {
-        supabaseAdmin.from('operation_logs').insert({
-          username: req.user!.username,
-          operation_type: 'ACCESS_DENIED',
-          business_type: 'SYSTEM',
-          operation_desc: `权限不足: ${req.method} ${req.path}, 需要角色: ${allowedRoles.join('|')}, 当前角色: ${req.user!.role}`,
-          ip_address: req.ip || req.connection.remoteAddress,
-          user_agent: req.get('User-Agent'),
-        }).then().catch(console.error);
-      });
-
+      logger.warn(`权限不足: ${req.user.username} 尝试访问 ${req.method} ${req.path}, 需要角色: ${allowedRoles.join('|')}, 当前角色: ${req.user.role}`);
+      
       return res.status(403).json({ 
         code: 403,
         message: '权限不足，无法访问该资源',
@@ -145,12 +110,4 @@ export const requireDataAccess = (checkOwnership = true) => {
 
     next();
   };
-};
-
-// 处理Supabase客户端用户的上下文
-export const setSupabaseContext = (supabase: SupabaseClient, user: any) => {
-  return supabase.auth.setSession({
-    access_token: user.token,
-    refresh_token: user.refreshToken
-  });
 };

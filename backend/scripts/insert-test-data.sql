@@ -37,13 +37,13 @@ DELETE FROM default_applications WHERE applicant LIKE 'test_%';
 DELETE FROM customers WHERE customer_code LIKE 'TEST%';
 DELETE FROM users WHERE username LIKE 'test_%';
 
--- 2. 插入测试用户
-INSERT INTO users (username, real_name, email, phone, department, role, status) VALUES
-('test_admin', '测试管理员', 'test.admin@example.com', '13800000001', '测试部门', 'ADMIN', 'ACTIVE'),
-('test_operator', '测试操作员', 'test.operator@example.com', '13800000002', '业务部门', 'OPERATOR', 'ACTIVE'),
-('test_auditor', '测试审核员', 'test.auditor@example.com', '13800000003', '风控部门', 'AUDITOR', 'ACTIVE'),
-('test_user1', '测试用户1', 'test.user1@example.com', '13800000004', '业务部门', 'OPERATOR', 'ACTIVE'),
-('test_user2', '测试用户2', 'test.user2@example.com', '13800000005', '业务部门', 'AUDITOR', 'INACTIVE');
+-- 2. 插入测试用户（密码均为：Test123456）
+INSERT INTO users (username, real_name, email, phone, department, role, status, hashed_password, created_by) VALUES
+('test_admin', '测试管理员', 'test.admin@example.com', '13800000001', '测试部门', 'ADMIN', 'ACTIVE', '$2b$10$Q0g1Mbq/VZ2Sj4yVVJ2jAeDpyprn1fac3wtqq5ynZb7u5en7PU/PS', 'system'),
+('test_operator', '测试操作员', 'test.operator@example.com', '13800000002', '业务部门', 'OPERATOR', 'ACTIVE', '$2b$10$Q0g1Mbq/VZ2Sj4yVVJ2jAeDpyprn1fac3wtqq5ynZb7u5en7PU/PS', 'system'),
+('test_auditor', '测试审核员', 'test.auditor@example.com', '13800000003', '风控部门', 'AUDITOR', 'ACTIVE', '$2b$10$Q0g1Mbq/VZ2Sj4yVVJ2jAeDpyprn1fac3wtqq5ynZb7u5en7PU/PS', 'system'),
+('test_user1', '测试用户1', 'test.user1@example.com', '13800000004', '业务部门', 'OPERATOR', 'ACTIVE', '$2b$10$Q0g1Mbq/VZ2Sj4yVVJ2jAeDpyprn1fac3wtqq5ynZb7u5en7PU/PS', 'system'),
+('test_user2', '测试用户2', 'test.user2@example.com', '13800000005', '业务部门', 'AUDITOR', 'INACTIVE', '$2b$10$Q0g1Mbq/VZ2Sj4yVVJ2jAeDpyprn1fac3wtqq5ynZb7u5en7PU/PS', 'system');
 
 -- 3. 插入测试客户
 INSERT INTO customers (customer_code, customer_name, industry, region, latest_external_rating, status) VALUES

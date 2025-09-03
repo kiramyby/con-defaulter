@@ -34,6 +34,7 @@ export const defaultReasonValidation = {
   query: z.object({
     page: z.number().int().min(1).default(1),
     size: z.number().int().min(1).max(100).default(10),
+    reasonName: z.string().optional(),
     enabled: z.boolean().optional(),
   }),
 };
@@ -115,6 +116,44 @@ export const statisticsValidation = {
     target: z.string().min(1),
     startYear: z.number().int().min(2000).max(3000).optional(),
     endYear: z.number().int().min(2000).max(3000).optional(),
+  }),
+};
+
+// 认证验证
+export const authValidation = {
+  login: z.object({
+    email: z.string().email('邮箱格式不正确'),
+    password: z.string().min(6, '密码至少6位'),
+  }),
+
+  refreshToken: z.object({
+    refresh_token: z.string().min(1, '刷新令牌不能为空'),
+  }),
+
+  changePassword: z.object({
+    currentPassword: z.string().min(6, '当前密码至少6位'),
+    newPassword: z.string().min(6, '新密码至少6位')
+      .refine(val => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/.test(val), {
+        message: '新密码必须包含大小写字母和数字，至少6位',
+      }),
+  }),
+
+  register: z.object({
+    username: z.string().min(2, '用户名至少2位').max(50, '用户名不能超过50位')
+      .refine(val => /^[a-zA-Z0-9_]+$/.test(val), {
+        message: '用户名只能包含字母、数字和下划线',
+      }),
+    realName: z.string().min(2, '真实姓名至少2位').max(100, '真实姓名不能超过100位'),
+    email: z.string().email('邮箱格式不正确'),
+    phone: z.string().optional(),
+    department: z.string().optional(),
+    role: z.enum(['ADMIN', 'OPERATOR', 'AUDITOR'], {
+      errorMap: () => ({ message: '角色必须是ADMIN、OPERATOR或AUDITOR之一' })
+    }),
+    password: z.string().min(6, '密码至少6位')
+      .refine(val => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/.test(val), {
+        message: '密码必须包含大小写字母和数字，至少6位',
+      }),
   }),
 };
 

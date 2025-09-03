@@ -15,9 +15,6 @@ interface EnvConfig {
   UPLOAD_PATH: string;
   MAX_FILE_SIZE: number;
   LOG_LEVEL: string;
-  SUPABASE_URL?: string;
-  SUPABASE_ANON_KEY?: string;
-  SUPABASE_SERVICE_KEY?: string;
 }
 
 // 验证必需的环境变量
@@ -43,9 +40,6 @@ export const config: EnvConfig = {
   UPLOAD_PATH: process.env.UPLOAD_PATH || './uploads',
   MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10), // 10MB
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
-  SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
 };
 
 export default config;
