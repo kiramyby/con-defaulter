@@ -5,7 +5,6 @@ import { PrismaClient } from '@prisma/client';
 import { ResponseUtil } from '../utils/response';
 import { config } from '../config/env';
 import logger from '../config/logger';
-import '../types/express';
 
 export class AuthController {
   constructor(private prisma: PrismaClient) {}

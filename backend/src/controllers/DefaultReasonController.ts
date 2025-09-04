@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import '../types/express';
 import { DefaultReasonService } from '../services/DefaultReasonService';
 import { ResponseUtil } from '../utils/response';
 import logger from '../config/logger';

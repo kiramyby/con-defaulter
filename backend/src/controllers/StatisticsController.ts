@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import '../types/express';
 import { PrismaClient } from '@prisma/client';
 import { StatisticsService } from '../services/StatisticsService';
 import { ResponseUtil } from '../utils/response';

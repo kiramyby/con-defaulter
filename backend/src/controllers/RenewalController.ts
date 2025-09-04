@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import '../types/express';
 import { RenewalService } from '../services/RenewalService';
 import { ResponseUtil } from '../utils/response';
 import logger from '../config/logger';
