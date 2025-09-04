@@ -78,11 +78,27 @@ export class RenewalService {
 
       logger.info(`创建重生申请: id=${renewalId}, customerId=${data.customerId}, applicant=${applicant}`);
 
+      // 获取重生原因信息
+      const renewalReason = await tx.defaultReason.findUnique({
+        where: { id: BigInt(data.renewalReason) },
+        select: { id: true, reason: true }
+      });
+
+      if (!renewalReason) {
+        throw new Error('重生原因不存在');
+      }
+
       return {
         renewalId,
         customerId: data.customerId,
         customerName: defaultCustomer.customerName,
-        status: 'PENDING',
+        renewalReason: {
+          id: Number(renewalReason.id),
+          reason: renewalReason.reason
+        },
+        status: 'PENDING' as const,
+        applicant,
+        remark: data.remark,
         createTime: renewal.createTime.toISOString(),
       };
     });
@@ -220,12 +236,12 @@ export class RenewalService {
         renewalReason: true,
         customer: {
           include: {
-            defaultCustomer: {
+            defaultCustomers: {
               where: { isActive: true },
               include: {
                 defaultReasons: {
                   include: {
-                    reason: true
+                    defaultReason: true
                   }
                 }
               }
@@ -251,15 +267,15 @@ export class RenewalService {
       customerInfo: {
         industry: renewal.customer?.industry,
         region: renewal.customer?.region,
-        latestExternalRating: renewal.customer?.defaultCustomer?.[0]?.latestExternalRating,
+        latestExternalRating: renewal.customer?.defaultCustomers?.[0]?.latestExternalRating,
       },
       renewalReason: {
         id: Number(renewal.renewalReason.id),
         reason: renewal.renewalReason.reason,
       },
-      originalDefaultReasons: renewal.customer?.defaultCustomer?.[0]?.defaultReasons?.map(dr => ({
-        id: Number(dr.reason.id),
-        reason: dr.reason.reason,
+      originalDefaultReasons: renewal.customer?.defaultCustomers?.[0]?.defaultReasons?.map((dr: any) => ({
+        id: Number(dr.defaultReason.id),
+        reason: dr.defaultReason.reason,
       })) || [],
       status: renewal.status,
       remark: renewal.remark,

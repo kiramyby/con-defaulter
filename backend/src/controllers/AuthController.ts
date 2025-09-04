@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { ResponseUtil } from '../utils/response';
 import { config } from '../config/env';
 import logger from '../config/logger';
+import '../types/express';
 
 export class AuthController {
   constructor(private prisma: PrismaClient) {}
@@ -422,8 +423,8 @@ export class AuthController {
         return ResponseUtil.badRequest(res, '不能禁用自己的账号');
       }
 
-      // 不能禁用其他管理员（除非是超级管理员）
-      if (user.role === 'ADMIN' && status === 'INACTIVE' && req.user?.role !== 'SUPER_ADMIN') {
+      // 不能禁用其他管理员账号
+      if (user.role === 'ADMIN' && status === 'INACTIVE' && req.user?.role !== 'ADMIN') {
         return ResponseUtil.forbidden(res, '无权限禁用其他管理员账号');
       }
 
@@ -709,8 +710,8 @@ export class AuthController {
         return ResponseUtil.badRequest(res, '不能重置自己的密码，请使用修改密码功能');
       }
 
-      // 不能重置其他管理员密码（除非是超级管理员）
-      if (targetUser.role === 'ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
+      // 不能重置其他管理员密码
+      if (targetUser.role === 'ADMIN' && req.user?.role !== 'ADMIN') {
         return ResponseUtil.forbidden(res, '无权限重置其他管理员密码');
       }
 

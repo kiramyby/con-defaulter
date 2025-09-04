@@ -1,32 +1,32 @@
 import { PrismaClient } from '@prisma/client';
 import logger from '../config/logger';
 
-interface IndustryStatistics {
+export interface IndustryStatistics {
   industry: string;
   count: number;
   percentage: number;
   trend: 'UP' | 'DOWN' | 'STABLE';
 }
 
-interface RegionStatistics {
+export interface RegionStatistics {
   region: string;
   count: number;
   percentage: number;
   trend: 'UP' | 'DOWN' | 'STABLE';
 }
 
-interface TrendPoint {
+export interface TrendPoint {
   year: number;
   defaultCount: number;
   renewalCount: number;
 }
 
-interface StatisticsParams {
+export interface StatisticsParams {
   year: number;
   type?: 'DEFAULT' | 'RENEWAL';
 }
 
-interface TrendParams {
+export interface TrendParams {
   dimension: 'INDUSTRY' | 'REGION';
   target: string;
   startYear: number;
