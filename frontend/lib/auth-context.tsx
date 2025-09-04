@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { ErrorHandler } from "./error-handler"
 
 interface User {
   id: string
@@ -90,8 +91,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "登录失败")
+        const error = await response.json().catch(() => ({ message: "登录请求失败" }))
+        
+        // 详细的错误处理
+        if (response.status === 401) {
+          throw new Error("用户名或密码错误")
+        } else if (response.status === 403) {
+          throw new Error("账户已被禁用，请联系管理员")
+        } else if (response.status === 429) {
+          throw new Error("登录尝试过于频繁，请稍后再试")
+        } else if (response.status >= 500) {
+          throw new Error("服务器繁忙，请稍后再试")
+        } else {
+          throw new Error(error.message || "登录失败")
+        }
       }
 
       const data: LoginResponse = await response.json().then((data) => data.data)
@@ -107,7 +120,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       router.push("/dashboard")
     } catch (error: any) {
-      throw new Error(error.message || "登录失败")
+      // 网络错误处理
+      if (ErrorHandler.isNetworkError(error)) {
+        throw new Error("网络连接失败，请检查网络设置")
+      }
+      throw error
     } finally {
       setLoading(false)
     }

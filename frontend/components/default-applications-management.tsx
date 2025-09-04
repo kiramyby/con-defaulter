@@ -24,45 +24,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, RefreshCw, Eye, CheckCircle, XCircle, Upload, FileText } from "lucide-react"
 import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth-context"
+import { usePermissions } from "@/lib/permissions"
+import { useErrorHandler } from "@/lib/error-handler"
+import { SecureContent } from "@/components/secure-content"
+import type { 
+  DefaultApplication, 
+  DefaultReason, 
+  DefaultApplicationsResponse,
+  DefaultReasonsResponse,
+  CreateDefaultApplicationData,
+  BatchApprovalData 
+} from "@/lib/api-types"
 
-interface DefaultApplication {
-  applicationId: number
-  customerName: string
-  latestExternalRating?: string
-  defaultReasons: Array<{
-    id: number
-    reason: string
-  }>
-  severity: "HIGH" | "MEDIUM" | "LOW"
-  remark?: string
-  attachments?: Array<{
-    fileName: string
-    fileUrl: string
-    fileSize: number
-  }>
-  applicant: string
-  status: "PENDING" | "APPROVED" | "REJECTED"
-  createTime: string
-  approveTime?: string
-  approver?: string
-  approveRemark?: string
-}
-
-interface DefaultReason {
-  id: number
-  reason: string
-  enabled: boolean
-  sortOrder: number
-}
-
-interface DefaultApplicationsListResponse {
-  total: number
-  page: number
-  size: number
-  list: DefaultApplication[]
-}
+// 使用从 @/lib/api-types 导入的类型
 
 export function DefaultApplicationsManagement() {
+  const { user } = useAuth()
+  const permissions = usePermissions(user)
+  const { toast } = useToast()
+  const { handle: handleError } = useErrorHandler()
   const [activeTab, setActiveTab] = useState("list")
   const [applications, setApplications] = useState<DefaultApplication[]>([])
   const [defaultReasons, setDefaultReasons] = useState<DefaultReason[]>([])
@@ -78,12 +59,12 @@ export function DefaultApplicationsManagement() {
     startTime: "",
     endTime: "",
   })
-  const [selectedApplications, setSelectedApplications] = useState<number[]>([])
+  const [selectedApplications, setSelectedApplications] = useState<string[]>([])
   const [viewingApplication, setViewingApplication] = useState<DefaultApplication | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false)
   const [approvalData, setApprovalData] = useState({
-    applicationId: 0,
+    applicationId: "",
     approved: true,
     remark: "",
   })
@@ -98,42 +79,56 @@ export function DefaultApplicationsManagement() {
     attachments: [] as Array<{ fileName: string; fileUrl: string; fileSize: number }>,
   })
 
-  const { toast } = useToast()
-
   const loadApplications = async () => {
+    // 检查权限，避免无权限时仍然加载数据
+    if (!permissions.hasAnyPermission(["VIEW_ALL_APPLICATIONS", "VIEW_OWN_APPLICATIONS"])) {
+      return
+    }
+
     setLoading(true)
     try {
       const response = await apiService.getDefaultApplications({
         page: pagination.page,
         size: pagination.size,
         customerName: filters.customerName || undefined,
-        status: filters.status || undefined,
+        status: (filters.status as "PENDING" | "APPROVED" | "REJECTED") || undefined,
         startTime: filters.startTime || undefined,
         endTime: filters.endTime || undefined,
+        // OPERATOR只能查看自己的申请
+        ...(user?.role === "OPERATOR" && { applicant: user.realName }),
       })
 
-      setApplications(response.list)
+      // 前端再次过滤，确保权限安全
+      let filteredApplications = response.list || []
+      if (user?.role === "OPERATOR") {
+        filteredApplications = filteredApplications.filter((app: DefaultApplication) => 
+          permissions.canViewApplication(app)
+        )
+      }
+
+      setApplications(filteredApplications)
       setPagination((prev) => ({
         ...prev,
         total: response.total,
       }))
-    } catch (error) {
-      toast({
-        title: "加载失败",
-        description: "无法加载申请列表",
-        variant: "destructive",
-      })
+    } catch (error: any) {
+      handleError(error, "加载申请列表")
     } finally {
       setLoading(false)
     }
   }
 
   const loadDefaultReasons = async () => {
+    // 检查权限，避免无权限时仍然加载数据
+    if (!permissions.hasPermission("VIEW_DEFAULT_REASONS")) {
+      return
+    }
+
     try {
-      const response = await apiService.getDefaultReasons({ enabled: true })
-      setDefaultReasons(response.list)
+      const response = await apiService.getDefaultReasons({ isEnabled: true })
+      setDefaultReasons(response.list || [])
     } catch (error) {
-      console.error("Failed to load default reasons:", error)
+      handleError(error, "加载违约原因列表")
     }
   }
 
@@ -151,22 +146,18 @@ export function DefaultApplicationsManagement() {
     loadApplications()
   }
 
-  const handleViewApplication = async (applicationId: number) => {
+  const handleViewApplication = async (applicationId: string) => {
     try {
-      const response = await apiService.getDefaultApplicationDetail(applicationId)
+      const response = await apiService.getDefaultApplication(applicationId)
       setViewingApplication(response)
       setIsViewDialogOpen(true)
     } catch (error) {
-      toast({
-        title: "加载失败",
-        description: "无法加载申请详情",
-        variant: "destructive",
-      })
+      handleError(error, "加载申请详情")
     }
   }
 
   // Handle single approval
-  const handleSingleApproval = (applicationId: number, approved: boolean) => {
+  const handleSingleApproval = (applicationId: string, approved: boolean) => {
     setApprovalData({
       applicationId,
       approved,
@@ -188,16 +179,10 @@ export function DefaultApplicationsManagement() {
         description: `申请已${approvalData.approved ? "通过" : "拒绝"}`,
       })
       setIsApprovalDialogOpen(false)
-      setApprovalData({ applicationId: 0, approved: true, remark: "" })
+      setApprovalData({ applicationId: "", approved: true, remark: "" })
       loadApplications()
     } catch (error) {
-      console.error("Failed to submit single approval:", error)
-      console.log(JSON.stringify(approvalData))
-      toast({
-        title: "审核失败",
-        description: "无法完成审核操作",
-        variant: "destructive",
-      })
+      handleError(error, "审核申请")
     } finally {
       setLoading(false)
     }
@@ -215,11 +200,13 @@ export function DefaultApplicationsManagement() {
 
     setLoading(true)
     try {
-      const batchData = selectedApplications.map((id) => ({
-        applicationId: id,
-        approved,
-        remark: approved ? "批量通过" : "批量拒绝",
-      }))
+      const batchData: BatchApprovalData = {
+        applications: selectedApplications.map((applicationId) => ({
+          applicationId,
+          approved,
+          remark: approved ? "批量通过" : "批量拒绝",
+        }))
+      }
 
       await apiService.batchApproveDefaultApplications(batchData)
       toast({
@@ -229,11 +216,7 @@ export function DefaultApplicationsManagement() {
       setSelectedApplications([])
       loadApplications()
     } catch (error) {
-      toast({
-        title: "批量审核失败",
-        description: "无法完成批量审核操作",
-        variant: "destructive",
-      })
+      handleError(error, "批量审核")
     } finally {
       setLoading(false)
     }
@@ -262,14 +245,16 @@ export function DefaultApplicationsManagement() {
 
     setLoading(true)
     try {
-      await apiService.createDefaultApplication({
+      const submitData: CreateDefaultApplicationData = {
         customerName: formData.customerName,
         latestExternalRating: formData.latestExternalRating || undefined,
         defaultReasons: formData.defaultReasons,
         severity: formData.severity,
         remark: formData.remark || undefined,
         attachments: formData.attachments.length > 0 ? formData.attachments : undefined,
-      })
+      }
+
+      await apiService.createDefaultApplication(submitData)
 
       toast({
         title: "提交成功",
@@ -288,11 +273,7 @@ export function DefaultApplicationsManagement() {
       setActiveTab("list")
       loadApplications()
     } catch (error: any) {
-      toast({
-        title: "提交失败",
-        description: error.message || "无法提交申请",
-        variant: "destructive",
-      })
+      handleError(error, "提交申请")
     } finally {
       setLoading(false)
     }
@@ -344,11 +325,7 @@ export function DefaultApplicationsManagement() {
         description: "文件已上传",
       })
     } catch (error) {
-      toast({
-        title: "上传失败",
-        description: "无法上传文件",
-        variant: "destructive",
-      })
+      handleError(error, "上传文件")
     }
 
     // Reset input
@@ -414,9 +391,11 @@ export function DefaultApplicationsManagement() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className={`grid w-full ${permissions.hasPermission("CREATE_DEFAULT_APPLICATION") ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="list">申请列表</TabsTrigger>
-              <TabsTrigger value="submit">提交申请</TabsTrigger>
+              {permissions.hasPermission("CREATE_DEFAULT_APPLICATION") && (
+                <TabsTrigger value="submit">提交申请</TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="list" className="space-y-4">
@@ -481,28 +460,30 @@ export function DefaultApplicationsManagement() {
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBatchApproval(true)}
-                    disabled={selectedApplications.length === 0 || loading}
-                    className="text-green-600 hover:text-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    批量通过
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBatchApproval(false)}
-                    disabled={selectedApplications.length === 0 || loading}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    批量拒绝
-                  </Button>
-                </div>
+                {permissions.hasPermission("APPROVE_APPLICATIONS") && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchApproval(true)}
+                      disabled={selectedApplications.length === 0 || loading}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      批量通过
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchApproval(false)}
+                      disabled={selectedApplications.length === 0 || loading}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      批量拒绝
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Table */}
@@ -515,14 +496,14 @@ export function DefaultApplicationsManagement() {
                           checked={
                             applications.length > 0 &&
                             applications
-                              .filter((app) => app.status === "PENDING")
-                              .every((app) => selectedApplications.includes(app.id))
+                              .filter((app) => app.status === "PENDING" && permissions.hasPermission("APPROVE_APPLICATIONS"))
+                              .every((app) => selectedApplications.includes(app.applicationId))
                           }
                           onCheckedChange={(checked) => {
                             if (checked) {
                               const pendingIds = applications
-                                .filter((app) => app.status === "PENDING")
-                                .map((app) => app.id)
+                                .filter((app) => app.status === "PENDING" && permissions.hasPermission("APPROVE_APPLICATIONS"))
+                                .map((app) => app.applicationId)
                               setSelectedApplications(pendingIds)
                             } else {
                               setSelectedApplications([])
@@ -558,16 +539,16 @@ export function DefaultApplicationsManagement() {
                       </TableRow>
                     ) : (
                       applications.map((app) => (
-                        <TableRow key={app.id}>
+                        <TableRow key={app.applicationId}>
                           <TableCell>
-                            {app.status === "PENDING" && (
+                            {app.status === "PENDING" && permissions.hasPermission("APPROVE_APPLICATIONS") && (
                               <Checkbox
-                                checked={selectedApplications.includes(app.id)}
+                                checked={selectedApplications.includes(app.applicationId)}
                                 onCheckedChange={(checked) => {
                                   if (checked) {
-                                    setSelectedApplications((prev) => [...prev, app.id])
+                                    setSelectedApplications((prev) => [...prev, app.applicationId])
                                   } else {
-                                    setSelectedApplications((prev) => prev.filter((id) => id !== app.id))
+                                    setSelectedApplications((prev) => prev.filter((id) => id !== app.applicationId))
                                   }
                                 }}
                               />
@@ -593,12 +574,12 @@ export function DefaultApplicationsManagement() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleViewApplication(app.id)}
+                                onClick={() => handleViewApplication(app.applicationId)}
                                 className="h-8 w-8 p-0"
                               >
                                 <Eye className="h-3 w-3" />
                               </Button>
-                              {app.status === "PENDING" && (
+                              {app.status === "PENDING" && permissions.hasPermission("APPROVE_APPLICATIONS") && (
                                 <>
                                   <Button
                                     variant="outline"
@@ -655,7 +636,8 @@ export function DefaultApplicationsManagement() {
               )}
             </TabsContent>
 
-            <TabsContent value="submit" className="space-y-4">
+            {permissions.hasPermission("CREATE_DEFAULT_APPLICATION") && (
+              <TabsContent value="submit" className="space-y-4">
               <form onSubmit={handleSubmitApplication} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -827,7 +809,8 @@ export function DefaultApplicationsManagement() {
                   </Button>
                 </div>
               </form>
-            </TabsContent>
+              </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>
@@ -844,7 +827,7 @@ export function DefaultApplicationsManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">申请ID</Label>
-                  <p className="text-sm">{viewingApplication.id}</p>
+                  <p className="text-sm">{viewingApplication.applicationId}</p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">客户名称</Label>

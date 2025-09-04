@@ -24,6 +24,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, RefreshCw, CheckCircle, XCircle, RotateCcw } from "lucide-react"
 import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth-context"
+import { usePermissions } from "@/lib/permissions"
+import { SecureContent } from "@/components/secure-content"
 
 interface DefaultCustomer {
   customerId: number
@@ -74,6 +77,8 @@ interface RenewalApplicationsListResponse {
 }
 
 export function RenewalManagement() {
+  const { user } = useAuth()
+  const permissions = usePermissions(user)
   const [activeTab, setActiveTab] = useState("customers")
   const [renewableCustomers, setRenewableCustomers] = useState<DefaultCustomer[]>([])
   const [renewalApplications, setRenewalApplications] = useState<RenewalApplication[]>([])
@@ -128,6 +133,11 @@ export function RenewalManagement() {
 
   // Load renewable customers
   const loadRenewableCustomers = async () => {
+    // 检查权限，避免无权限时仍然加载数据
+    if (!permissions.hasAnyPermission(["CREATE_RENEWAL_APPLICATION", "VIEW_ALL_RENEWALS", "VIEW_OWN_RENEWALS"])) {
+      return
+    }
+    
     setLoading(true)
     try {
       const response = await apiService.getRenewableCustomers({
@@ -154,6 +164,11 @@ export function RenewalManagement() {
 
   // Load renewal applications
   const loadRenewalApplications = async () => {
+    // 检查权限，避免无权限时仍然加载数据
+    if (!permissions.hasAnyPermission(["VIEW_ALL_RENEWALS", "VIEW_OWN_RENEWALS"])) {
+      return
+    }
+    
     setLoading(true)
     try {
       const response = await apiService.getRenewalApplications({
@@ -390,7 +405,8 @@ export function RenewalManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <SecureContent permissions={["CREATE_RENEWAL_APPLICATION", "VIEW_ALL_RENEWALS", "VIEW_OWN_RENEWALS"]}>
+      <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -899,6 +915,7 @@ export function RenewalManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </SecureContent>
   )
 }

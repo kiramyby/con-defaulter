@@ -10,6 +10,9 @@ import { Loader2, TrendingUp, TrendingDown, Minus, BarChart3, PieChart, LineChar
 import * as echarts from "echarts"
 import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth-context"
+import { usePermissions } from "@/lib/permissions"
+import { SecureContent } from "@/components/secure-content"
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D", "#FFC658", "#FF7C7C"]
 
@@ -42,6 +45,8 @@ interface TrendData {
 }
 
 export function StatisticsAnalysis() {
+  const { user } = useAuth()
+  const permissions = usePermissions(user)
   const [loading, setLoading] = useState(false)
   const [industryData, setIndustryData] = useState<StatisticsData | null>(null)
   const [regionData, setRegionData] = useState<StatisticsData | null>(null)
@@ -63,6 +68,11 @@ export function StatisticsAnalysis() {
   const trendLineRef = useRef<HTMLDivElement>(null)
 
   const loadStatistics = async () => {
+    // 检查权限，避免无权限时仍然加载数据
+    if (!permissions.hasAnyPermission(["VIEW_BASIC_STATISTICS", "VIEW_STATISTICS", "ADVANCED_ANALYTICS"])) {
+      return
+    }
+    
     setLoading(true)
     try {
       const [industryResponse, regionResponse] = await Promise.all([
@@ -84,6 +94,11 @@ export function StatisticsAnalysis() {
   }
 
   const loadTrendData = async () => {
+    // 检查权限，避免无权限时仍然加载数据
+    if (!permissions.hasAnyPermission(["VIEW_STATISTICS", "ADVANCED_ANALYTICS"])) {
+      return
+    }
+    
     setLoading(true)
     try {
       const response = await apiService.getTrendStatistics(trendParams)
@@ -453,7 +468,8 @@ export function StatisticsAnalysis() {
   }
 
   return (
-    <div className="space-y-6">
+    <SecureContent permission="VIEW_STATISTICS">
+      <div className="space-y-6">
       {/* 控制面板 */}
       <Card>
         <CardHeader>
@@ -500,10 +516,12 @@ export function StatisticsAnalysis() {
       </Card>
 
       <Tabs defaultValue="industry" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${permissions.hasPermission("ADVANCED_ANALYTICS") ? "grid-cols-3" : "grid-cols-2"}`}>
           <TabsTrigger value="industry">按行业统计</TabsTrigger>
           <TabsTrigger value="region">按区域统计</TabsTrigger>
-          <TabsTrigger value="trend">趋势分析</TabsTrigger>
+          {permissions.hasPermission("ADVANCED_ANALYTICS") && (
+            <TabsTrigger value="trend">趋势分析</TabsTrigger>
+          )}
         </TabsList>
 
         {/* 按行业统计 */}
@@ -679,7 +697,8 @@ export function StatisticsAnalysis() {
         </TabsContent>
 
         {/* 趋势分析 */}
-        <TabsContent value="trend" className="space-y-4">
+        {permissions.hasPermission("ADVANCED_ANALYTICS") && (
+          <TabsContent value="trend" className="space-y-4">
           {/* 趋势分析控制面板 */}
           <Card>
             <CardHeader>
@@ -770,8 +789,10 @@ export function StatisticsAnalysis() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
+          </TabsContent>
+        )}
       </Tabs>
-    </div>
+      </div>
+    </SecureContent>
   )
 }

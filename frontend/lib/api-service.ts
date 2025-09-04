@@ -1,3 +1,25 @@
+import type {
+  ApiResponse,
+  DefaultReasonsResponse,
+  DefaultApplicationsResponse,
+  DefaultCustomersResponse,
+  RenewalApplicationsResponse,
+  GetDefaultReasonsParams,
+  GetDefaultApplicationsParams,
+  CreateDefaultApplicationData,
+  ApprovalData,
+  BatchApprovalData,
+  FileUploadResponse,
+  StatisticsData,
+  TrendData,
+  DefaultApplication,
+  CreateUserData,
+  UpdateUserData,
+  UsersResponse,
+  GetUsersParams,
+  User
+} from './api-types'
+
 class ApiService {
   private baseURL = "http://localhost:3001/api/v1"
 
@@ -16,24 +38,67 @@ class ApiService {
       ...options,
     }
 
-    const response = await fetch(url, config)
+    try {
+      const response = await fetch(url, config)
+      
+      // 处理不同的HTTP状态码
+      if (response.status === 401) {
+        // 未授权 - 清除本地token并跳转登录
+        localStorage.removeItem("auth_token")
+        localStorage.removeItem("refresh_token")
+        localStorage.removeItem("auth_user")
+        window.location.href = "/login"
+        throw new Error("登录已过期，请重新登录")
+      }
+      
+      if (response.status === 403) {
+        // 权限不足
+        throw new Error("权限不足，无法执行此操作")
+      }
+      
+      if (response.status === 404) {
+        // 资源不存在
+        throw new Error("请求的资源不存在")
+      }
+      
+      if (response.status === 422) {
+        // 数据验证失败
+        const error = await response.json().catch(() => ({ message: "数据验证失败" }))
+        throw new Error(error.message || "请求数据格式不正确")
+      }
+      
+      if (response.status === 429) {
+        // 请求过于频繁
+        throw new Error("请求过于频繁，请稍后再试")
+      }
+      
+      if (response.status >= 500) {
+        // 服务器错误
+        throw new Error("服务器内部错误，请稍后再试")
+      }
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Network error" }))
-      throw new Error(error.message || `HTTP ${response.status}`)
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: `请求失败 (${response.status})` }))
+        throw new Error(error.message || `HTTP ${response.status}`)
+      }
+
+      const responseData = await response.json()
+      
+      // 检查业务状态码
+      if (responseData.code && responseData.code !== 200) {
+        throw new Error(responseData.message || "请求失败")
+      }
+      
+      return responseData.data || responseData
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error("网络连接失败，请检查网络设置")
+      }
+      throw error
     }
-
-    return response.json().then((data) => data.data)
   }
 
-  async getDefaultReasons(
-    params: {
-      page?: number
-      size?: number
-      reasonName?: string
-      isEnabled?: boolean
-    } = {},
-  ) {
+  async getDefaultReasons(params: GetDefaultReasonsParams = {}): Promise<DefaultReasonsResponse> {
     const searchParams = new URLSearchParams()
     if (params.page) searchParams.append("page", params.page.toString())
     if (params.size) searchParams.append("size", params.size.toString())
@@ -63,18 +128,7 @@ class ApiService {
     return this.request(`/default-reasons/${id}`)
   }
 
-  async getDefaultApplications(
-    params: {
-      page?: number
-      size?: number
-      status?: "PENDING" | "APPROVED" | "REJECTED"
-      customerName?: string
-      applicant?: string
-      severity?: "HIGH" | "MEDIUM" | "LOW"
-      startTime?: string
-      endTime?: string
-    } = {},
-  ) {
+  async getDefaultApplications(params: GetDefaultApplicationsParams = {}): Promise<DefaultApplicationsResponse> {
     const searchParams = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
       if (value) searchParams.append(key, value.toString())
@@ -83,51 +137,28 @@ class ApiService {
     return this.request(`/default-applications?${searchParams}`)
   }
 
-  async createDefaultApplication(data: {
-    customerName: string
-    latestExternalRating?: string
-    defaultReasons: number[]
-    severity: "HIGH" | "MEDIUM" | "LOW"
-    remark?: string
-    attachments?: Array<{
-      fileName: string
-      fileUrl: string
-      fileSize: number
-    }>
-  }) {
+  async createDefaultApplication(data: CreateDefaultApplicationData): Promise<DefaultApplication> {
     return this.request("/default-applications", {
       method: "POST",
       body: JSON.stringify(data),
     })
   }
 
-  async getDefaultApplication(applicationId: string) {
+  async getDefaultApplication(applicationId: string): Promise<DefaultApplication> {
     return this.request(`/default-applications/${applicationId}`)
   }
 
-  async approveDefaultApplication(
-    applicationId: string,
-    data: {
-      approved: boolean
-      remark?: string
-    },
-  ) {
+  async approveDefaultApplication(applicationId: string, data: ApprovalData): Promise<void> {
     return this.request(`/default-applications/${applicationId}/approve`, {
       method: "POST",
       body: JSON.stringify(data),
     })
   }
 
-  async batchApproveDefaultApplications(
-    applications: Array<{
-      applicationId: string
-      approved: boolean
-      remark?: string
-    }>,
-  ) {
+  async batchApproveDefaultApplications(data: BatchApprovalData): Promise<void> {
     return this.request("/default-applications/batch-approve", {
       method: "POST",
-      body: JSON.stringify({ applications }),
+      body: JSON.stringify(data),
     })
   }
 
@@ -303,6 +334,47 @@ class ApiService {
     }
 
     return response.json()
+  }
+
+  // 用户管理相关方法
+  async getUsers(params: GetUsersParams = {}): Promise<UsersResponse> {
+    const searchParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) searchParams.append(key, value.toString())
+    })
+
+    return this.request(`/users?${searchParams}`)
+  }
+
+  async createUser(data: CreateUserData): Promise<User> {
+    return this.request("/users", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getUser(userId: number): Promise<User> {
+    return this.request(`/users/${userId}`)
+  }
+
+  async updateUser(userId: number, data: UpdateUserData): Promise<User> {
+    return this.request(`/users/${userId}`, {
+      method: "PUT", 
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    return this.request(`/users/${userId}`, {
+      method: "DELETE",
+    })
+  }
+
+  async resetUserPassword(userId: number, newPassword: string): Promise<void> {
+    return this.request(`/users/${userId}/reset-password`, {
+      method: "POST",
+      body: JSON.stringify({ password: newPassword }),
+    })
   }
 }
 

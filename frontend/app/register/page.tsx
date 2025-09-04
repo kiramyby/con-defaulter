@@ -20,7 +20,7 @@ export default function RegisterPage() {
     email: "",
     phone: "",
     department: "",
-    role: "" as "ADMIN" | "OPERATOR" | "AUDITOR" | "",
+    role: "" as "ADMIN" | "OPERATOR" | "AUDITOR" | "USER" | "",
     password: "",
     confirmPassword: "",
   })
@@ -199,7 +199,7 @@ export default function RegisterPage() {
               <Label htmlFor="role">用户角色 *</Label>
               <Select
                 value={formData.role}
-                onValueChange={(value: "ADMIN" | "OPERATOR" | "AUDITOR") =>
+                onValueChange={(value: "ADMIN" | "OPERATOR" | "AUDITOR" | "USER") =>
                   setFormData((prev) => ({ ...prev, role: value }))
                 }
               >
@@ -208,8 +208,9 @@ export default function RegisterPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ADMIN">系统管理员</SelectItem>
-                  <SelectItem value="OPERATOR">操作员</SelectItem>
                   <SelectItem value="AUDITOR">审核员</SelectItem>
+                  <SelectItem value="OPERATOR">操作员</SelectItem>
+                  <SelectItem value="USER">普通用户</SelectItem>
                 </SelectContent>
               </Select>
             </div>

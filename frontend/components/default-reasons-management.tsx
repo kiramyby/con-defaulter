@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import type { DefaultReason, DefaultReasonsResponse } from "@/lib/api-types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,25 +35,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Edit, Trash2, RefreshCw } from "lucide-react"
 import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth-context"
+import { usePermissions } from "@/lib/permissions"
+import { SecureContent } from "@/components/secure-content"
 
-interface DefaultReason {
-  id: number
-  reasonCode: string
-  reasonName: string
-  description: string
-  isEnabled: boolean
-  createTime: string
-  updateTime: string
-}
-
-interface DefaultReasonsListResponse {
-  total: number
-  page: number
-  size: number
-  list: DefaultReason[]
-}
+// 使用从 @/lib/api-types 导入的类型
 
 export function DefaultReasonsManagement() {
+  const { user } = useAuth()
+  const permissions = usePermissions(user)
   const [reasons, setReasons] = useState<DefaultReason[]>([])
   const [loading, setLoading] = useState(false)
   const [pagination, setPagination] = useState({
@@ -77,6 +68,11 @@ export function DefaultReasonsManagement() {
 
   // Load reasons data
   const loadReasons = async () => {
+    // 检查权限，避免无权限时仍然加载数据
+    if (!permissions.hasPermission("VIEW_DEFAULT_REASONS")) {
+      return
+    }
+    
     setLoading(true)
     try {
       const response = await apiService.getDefaultReasons({
@@ -85,11 +81,10 @@ export function DefaultReasonsManagement() {
         reasonName: filters.reasonName || undefined,
         isEnabled: filters.isEnabled,
       })
-      const data = response as DefaultReasonsListResponse
-      setReasons(data.list)
+      setReasons(response.list)
       setPagination((prev) => ({
         ...prev,
-        total: data.total,
+        total: response.total,
       }))
     } catch (error) {
       toast({
@@ -168,9 +163,9 @@ export function DefaultReasonsManagement() {
   const handleEdit = (reason: DefaultReason) => {
     setEditingReason(reason)
     setFormData({
-      reason: reason.reasonName,
-      detail: reason.description,
-      enabled: reason.isEnabled,
+      reason: reason.reason,
+      detail: reason.detail,
+      enabled: reason.enabled,
       sortOrder: 1,
     })
     setIsDialogOpen(true)
@@ -193,7 +188,8 @@ export function DefaultReasonsManagement() {
   }
   console.log(reasons)
   return (
-    <div className="space-y-6">
+    <SecureContent permission="VIEW_DEFAULT_REASONS">
+      <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -201,10 +197,12 @@ export function DefaultReasonsManagement() {
               <CardTitle>违约原因管理</CardTitle>
               <CardDescription>管理系统中的违约原因配置，支持启用/禁用和排序</CardDescription>
             </div>
-            <Button onClick={handleAddNew} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              新增原因
-            </Button>
+            {permissions.hasPermission("CREATE_DEFAULT_REASON") && (
+              <Button onClick={handleAddNew} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                新增原因
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -303,8 +301,8 @@ export function DefaultReasonsManagement() {
                             onCheckedChange={() => handleStatusToggle(reason)}
                             size="sm"
                           /> */}
-                          <Badge variant={reason.isEnabled ? "default" : "destructive"}>
-                            {reason.isEnabled ? "启用" : "禁用"}
+                          <Badge variant={reason.enabled ? "default" : "destructive"}>
+                            {reason.enabled ? "启用" : "禁用"}
                           </Badge>
                         </div>
                       </TableCell>
@@ -313,42 +311,49 @@ export function DefaultReasonsManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(reason)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive bg-transparent"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>确认删除</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  确定要删除这个违约原因吗？此操作不可撤销。
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>取消</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDelete(reason.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          {permissions.hasPermission("UPDATE_DEFAULT_REASON") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(reason)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {permissions.hasPermission("DELETE_DEFAULT_REASON") && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive bg-transparent"
                                 >
-                                  删除
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>确认删除</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    确定要删除这个违约原因吗？此操作不可撤销。
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>取消</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDelete(reason.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    删除
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                          {!permissions.hasAnyPermission(["UPDATE_DEFAULT_REASON", "DELETE_DEFAULT_REASON"]) && (
+                            <span className="text-sm text-muted-foreground">只读</span>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -466,6 +471,7 @@ export function DefaultReasonsManagement() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </SecureContent>
   )
 }

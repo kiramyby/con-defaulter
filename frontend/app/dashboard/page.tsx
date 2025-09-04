@@ -10,15 +10,19 @@ import { DefaultReasonsManagement } from "@/components/default-reasons-managemen
 import { DefaultApplicationsManagement } from "@/components/default-applications-management"
 import { RenewalManagement } from "@/components/renewal-management"
 import { StatisticsAnalysis } from "@/components/statistics-analysis"
+import { UserManagement } from "@/components/user-management"
 import { Toaster } from "@/components/ui/toaster"
+import { ErrorProvider } from "@/components/error-provider"
 import { useAuth } from "@/lib/auth-context"
 import Link from "next/link"
 import { apiService } from "@/lib/api-service"
+import { usePermissions } from "@/lib/permissions"
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const { user, logout, loading } = useAuth()
   const [isMounted, setIsMounted] = useState(false)
+  const permissions = usePermissions(user)
 
   useEffect(() => {
     setIsMounted(true)
@@ -111,7 +115,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <ErrorProvider>
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-6 py-4">
@@ -125,9 +130,9 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-sm text-muted-foreground">
-                欢迎，{user?.realName} ({user?.role})
+                欢迎，{user?.realName} ({permissions.getRoleDescription()})
               </div>
-              {user?.role === "ADMIN" && (
+              {permissions.hasPermission("CREATE_USER") && (
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/register">
                     <UserPlus className="h-4 w-4 mr-2" />
@@ -150,12 +155,25 @@ export default function Dashboard() {
 
       <div className="container mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">概览</TabsTrigger>
-            <TabsTrigger value="reasons">违约原因</TabsTrigger>
-            <TabsTrigger value="applications">认定申请</TabsTrigger>
-            <TabsTrigger value="renewals">违约重生</TabsTrigger>
-            <TabsTrigger value="statistics">统计分析</TabsTrigger>
+          <TabsList className={`grid w-full grid-cols-${permissions.getFilteredMenuItems().length}`}>
+            {permissions.hasPermission("VIEW_OVERVIEW") && (
+              <TabsTrigger value="overview">概览</TabsTrigger>
+            )}
+            {permissions.hasPermission("VIEW_DEFAULT_REASONS") && (
+              <TabsTrigger value="reasons">违约原因</TabsTrigger>
+            )}
+            {permissions.hasAnyPermission(["CREATE_DEFAULT_APPLICATION", "VIEW_ALL_APPLICATIONS", "VIEW_OWN_APPLICATIONS"]) && (
+              <TabsTrigger value="applications">认定申请</TabsTrigger>
+            )}
+            {permissions.hasAnyPermission(["CREATE_RENEWAL_APPLICATION", "VIEW_ALL_RENEWALS", "VIEW_OWN_RENEWALS"]) && (
+              <TabsTrigger value="renewals">违约重生</TabsTrigger>
+            )}
+            {permissions.hasAnyPermission(["VIEW_BASIC_STATISTICS", "VIEW_STATISTICS", "ADVANCED_ANALYTICS"]) && (
+              <TabsTrigger value="statistics">统计分析</TabsTrigger>
+            )}
+            {permissions.hasPermission("MANAGE_USERS") && (
+              <TabsTrigger value="users">用户管理</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -280,25 +298,40 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="reasons">
-            <DefaultReasonsManagement />
-          </TabsContent>
+          {permissions.hasPermission("VIEW_DEFAULT_REASONS") && (
+            <TabsContent value="reasons">
+              <DefaultReasonsManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="applications">
-            <DefaultApplicationsManagement />
-          </TabsContent>
+          {permissions.hasAnyPermission(["CREATE_DEFAULT_APPLICATION", "VIEW_ALL_APPLICATIONS", "VIEW_OWN_APPLICATIONS"]) && (
+            <TabsContent value="applications">
+              <DefaultApplicationsManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="renewals">
-            <RenewalManagement />
-          </TabsContent>
+          {permissions.hasAnyPermission(["CREATE_RENEWAL_APPLICATION", "VIEW_ALL_RENEWALS", "VIEW_OWN_RENEWALS"]) && (
+            <TabsContent value="renewals">
+              <RenewalManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="statistics">
-            <StatisticsAnalysis />
-          </TabsContent>
+          {permissions.hasAnyPermission(["VIEW_BASIC_STATISTICS", "VIEW_STATISTICS", "ADVANCED_ANALYTICS"]) && (
+            <TabsContent value="statistics">
+              <StatisticsAnalysis />
+            </TabsContent>
+          )}
+
+          {permissions.hasPermission("MANAGE_USERS") && (
+            <TabsContent value="users">
+              <UserManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
-      <Toaster />
-    </div>
+        <Toaster />
+      </div>
+    </ErrorProvider>
   )
 }
