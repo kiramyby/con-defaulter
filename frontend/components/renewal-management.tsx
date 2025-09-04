@@ -418,12 +418,15 @@ export function RenewalManagement() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="customers">可重生客户</TabsTrigger>
+            <TabsList className={`grid w-full ${permissions.hasPermission("VIEW_RENEWABLE_CUSTOMERS") ? "grid-cols-2" : "grid-cols-1"}`}>
+              {permissions.hasPermission("VIEW_RENEWABLE_CUSTOMERS") && (
+                <TabsTrigger value="customers">可重生客户</TabsTrigger>
+              )}
               <TabsTrigger value="applications">重生申请</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="customers" className="space-y-4">
+            {permissions.hasPermission("VIEW_RENEWABLE_CUSTOMERS") && (
+              <TabsContent value="customers" className="space-y-4">
               {/* Customer Filters */}
               <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
                 <div className="flex-1">
@@ -543,9 +546,10 @@ export function RenewalManagement() {
                   </div>
                 </div>
               )}
-            </TabsContent>
-
-            <TabsContent value="applications" className="space-y-4">
+            </TabsContent>)}
+            
+            {permissions.hasPermission("VIEW_RENEWABLE_CUSTOMERS") && (
+              <TabsContent value="applications" className="space-y-4">
               {/* Application Filters */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg bg-muted/50">
                 <div className="space-y-2">
@@ -777,6 +781,7 @@ export function RenewalManagement() {
                 </div>
               )}
             </TabsContent>
+          )}
           </Tabs>
         </CardContent>
       </Card>
