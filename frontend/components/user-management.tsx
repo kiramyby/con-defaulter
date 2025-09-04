@@ -219,7 +219,7 @@ export function UserManagement() {
       username: user.username,
       realName: user.realName,
       email: user.email,
-      phone: "",
+      phone: user.phone,
       department: user.department,
       role: user.role,
       status: user.status,

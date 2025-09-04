@@ -57,7 +57,7 @@ export function StatisticsAnalysis() {
     startYear: new Date().getFullYear() - 2,
     endYear: new Date().getFullYear(),
     dimension: "INDUSTRY" as "INDUSTRY" | "REGION",
-    target: "",
+    target: "test",
   })
   const { toast } = useToast()
 

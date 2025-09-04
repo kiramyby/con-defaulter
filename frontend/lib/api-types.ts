@@ -20,6 +20,7 @@ export interface User {
   dbId: number
   username: string
   realName: string
+  phone: string
   role: "ADMIN" | "OPERATOR" | "AUDITOR" | "USER"
   status: "ACTIVE" | "INACTIVE"
   department: string

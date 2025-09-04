@@ -371,9 +371,9 @@ class ApiService {
   }
 
   async resetUserPassword(userId: number | string, newPassword: string): Promise<void> {
-    return this.request(`/users/${userId}/reset-password`, {
-      method: "POST",
-      body: JSON.stringify({ password: newPassword }),
+    return this.request(`/users/${userId}/password`, {
+      method: "PUT",
+      body: JSON.stringify({ newPassword }),
     })
   }
 }
