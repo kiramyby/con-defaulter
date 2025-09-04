@@ -9,13 +9,13 @@ declare global {
         dbId: number;           // 数据库中的用户ID
         username: string;       // 用户名
         realName: string;       // 真实姓名
-        role: 'ADMIN' | 'OPERATOR' | 'AUDITOR';  // 用户角色
+        role: 'ADMIN' | 'AUDITOR' | 'OPERATOR' | 'USER';  // 用户角色
         status: 'ACTIVE' | 'INACTIVE';           // 用户状态
         department?: string;    // 部门
       };
       checkDataAccess?: {
         username: string;
-        role: 'ADMIN' | 'OPERATOR' | 'AUDITOR';
+        role: 'ADMIN' | 'AUDITOR' | 'OPERATOR' | 'USER';
         checkOwnership: boolean;
       };
     }

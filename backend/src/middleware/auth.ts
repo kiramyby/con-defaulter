@@ -61,7 +61,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 };
 
 // 角色权限检查中间件
-export const requireRole = (allowedRoles: ('ADMIN' | 'OPERATOR' | 'AUDITOR')[]) => {
+export const requireRole = (allowedRoles: ('ADMIN' | 'AUDITOR' | 'OPERATOR' | 'USER')[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ 

@@ -374,8 +374,9 @@
             "type": "string",
             "enum": [
               "ADMIN",
+              "AUDITOR",
               "OPERATOR",
-              "AUDITOR"
+              "USER"
             ],
             "description": "用户角色"
           },
@@ -606,8 +607,9 @@
                               "type": "string",
                               "enum": [
                                 "ADMIN",
+                                "AUDITOR",
                                 "OPERATOR",
-                                "AUDITOR"
+                                "USER"
                               ]
                             },
                             "status": {
@@ -842,8 +844,9 @@
                           "type": "string",
                           "enum": [
                             "ADMIN",
+                            "AUDITOR", 
                             "OPERATOR",
-                            "AUDITOR"
+                            "USER"
                           ]
                         },
                         "status": {
@@ -927,8 +930,9 @@
                     "type": "string",
                     "enum": [
                       "ADMIN",
-                      "OPERATOR",
-                      "AUDITOR"
+                      "AUDITOR",
+                      "OPERATOR", 
+                      "USER"
                     ],
                     "description": "用户角色"
                   },
@@ -1043,8 +1047,9 @@
               "type": "string",
               "enum": [
                 "ADMIN",
+                "AUDITOR",
                 "OPERATOR",
-                "AUDITOR"
+                "USER"
               ]
             },
             "description": "用户角色"

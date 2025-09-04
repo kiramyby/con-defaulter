@@ -305,7 +305,7 @@ export interface UserDto {
   realName: string;
   email: string;
   phone?: string;
-  role: 'ADMIN' | 'OPERATOR' | 'AUDITOR';
+  role: 'ADMIN' | 'AUDITOR' | 'OPERATOR' | 'USER';
   status: 'ACTIVE' | 'INACTIVE';
   department?: string;
   createTime: string;
@@ -317,7 +317,7 @@ export interface UserDto {
 export interface UserQueryParams {
   page?: number;
   size?: number;
-  role?: 'ADMIN' | 'OPERATOR' | 'AUDITOR';
+  role?: 'ADMIN' | 'AUDITOR' | 'OPERATOR' | 'USER';
   status?: 'ACTIVE' | 'INACTIVE';
   keyword?: string;
 }

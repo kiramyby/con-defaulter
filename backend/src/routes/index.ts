@@ -27,6 +27,7 @@ import {
 
 // Middleware
 import { authenticateToken, requireRole, requireDataAccess } from '../middleware/auth';
+import { requirePermission, requireAnyPermission } from '../config/permissions';
 
 const router = Router();
 
@@ -142,7 +143,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                           type: string
    *                         role:
    *                           type: string
-   *                           enum: [ADMIN, OPERATOR, AUDITOR]
+   *                           enum: [ADMIN, AUDITOR, OPERATOR, USER]
    *                         status:
    *                           type: string
    *                           enum: [ACTIVE, INACTIVE]
@@ -307,7 +308,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                       type: string
    *                     role:
    *                       type: string
-   *                       enum: [ADMIN, OPERATOR, AUDITOR]
+   *                       enum: [ADMIN, AUDITOR, OPERATOR, USER]
    *                     status:
    *                       type: string
    *                     department:
@@ -368,7 +369,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                 description: 部门
    *               role:
    *                 type: string
-   *                 enum: [ADMIN, OPERATOR, AUDITOR]
+   *                 enum: [ADMIN, AUDITOR, OPERATOR, USER]
    *                 description: 用户角色
    *               password:
    *                 type: string
@@ -413,7 +414,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/auth/register',
     authenticateToken,
-    requireRole(['ADMIN']),
+    requirePermission('CREATE_USER'),
     validate(authValidation.register),
     authController.register,
   );
@@ -449,7 +450,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         name: role
    *         schema:
    *           type: string
-   *           enum: [ADMIN, OPERATOR, AUDITOR]
+   *           enum: [ADMIN, AUDITOR, OPERATOR, USER]
    *         description: 用户角色
    *       - in: query
    *         name: status
@@ -503,7 +504,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.get('/users',
     authenticateToken,
-    requireRole(['ADMIN']),
+    requirePermission('VIEW_USERS'),
     validateQuery(userManagementValidation.getAllUsers),
     authController.getAllUsers,
   );
@@ -570,7 +571,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.get('/users/:userId',
     authenticateToken,
-    requireRole(['ADMIN']),
+    requirePermission('VIEW_USERS'),
     authController.getUserById,
   );
 
@@ -657,7 +658,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.put('/users/:userId/status',
     authenticateToken,
-    requireRole(['ADMIN']),
+    requirePermission('UPDATE_USER'),
     validate(userManagementValidation.updateUserStatus),
     authController.updateUserStatus,
   );
@@ -724,7 +725,9 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                   type: string
    *                   format: date-time
    */
-  router.get('/default-reasons', 
+  router.get('/default-reasons',
+    authenticateToken,
+    requirePermission('VIEW_DEFAULT_REASONS'),
     validateQuery(defaultReasonValidation.query),
     defaultReasonController.getReasons,
   );
@@ -891,7 +894,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/default-reasons',
     authenticateToken,
-    requireRole(['ADMIN', 'OPERATOR']),
+    requirePermission('CREATE_DEFAULT_REASON'),
     validate(defaultReasonValidation.create),
     defaultReasonController.createReason,
   );
@@ -981,7 +984,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.put('/default-reasons/:id',
     authenticateToken,
-    requireRole(['ADMIN', 'OPERATOR']),
+    requirePermission('UPDATE_DEFAULT_REASON'),
     validate(defaultReasonValidation.update),
     defaultReasonController.updateReason,
   );
@@ -1050,7 +1053,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.delete('/default-reasons/:id',
     authenticateToken,
-    requireRole(['ADMIN']),
+    requirePermission('DELETE_DEFAULT_REASON'),
     defaultReasonController.deleteReason,
   );
   
@@ -1123,7 +1126,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/default-reasons/batch-status',
     authenticateToken,
-    requireRole(['ADMIN']),
+    requirePermission('UPDATE_DEFAULT_REASON'),
     defaultReasonController.batchUpdateStatus,
   );
 
@@ -1213,7 +1216,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/default-applications',
     authenticateToken,
-    requireRole(['ADMIN', 'OPERATOR']), // 只有管理员和操作员可以提交申请
+    requirePermission('CREATE_DEFAULT_APPLICATION'),
     validate(defaultApplicationValidation.create),
     defaultApplicationController.createApplication,
   );
@@ -1318,7 +1321,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.get('/default-applications',
     authenticateToken,
-    requireDataAccess(true), // 需要检查数据访问权限
+    requireAnyPermission(['VIEW_ALL_APPLICATIONS', 'VIEW_OWN_APPLICATIONS']),
+    requireDataAccess(true),
     validateQuery(defaultApplicationValidation.query),
     defaultApplicationController.getApplications,
   );
@@ -1509,7 +1513,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/default-applications/:applicationId/approve',
     authenticateToken,
-    requireRole(['ADMIN', 'AUDITOR']),
+    requirePermission('APPROVE_APPLICATIONS'),
     validate(defaultApplicationValidation.approve),
     defaultApplicationController.approveApplication,
   );
@@ -1602,7 +1606,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/default-applications/batch-approve',
     authenticateToken,
-    requireRole(['ADMIN', 'AUDITOR']),
+    requirePermission('APPROVE_APPLICATIONS'),
     validate(defaultApplicationValidation.batchApprove),
     defaultApplicationController.batchApprove,
   );
@@ -1698,7 +1702,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.get('/default-customers',
     authenticateToken,
-    requireDataAccess(false), // 所有角色都可查看，但可能有数据范围限制
+    requireAnyPermission(['VIEW_ALL_CUSTOMERS', 'VIEW_OWN_CUSTOMERS']),
+    requireDataAccess(false),
     defaultCustomerController.getDefaultCustomers,
   );
   
@@ -1755,8 +1760,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.get('/default-customers/export',
     authenticateToken,
-    requireRole(['ADMIN', 'AUDITOR', 'OPERATOR']), // 所有角色都可导出
-    requireDataAccess(false), // 但数据范围根据权限控制
+    requireAnyPermission(['EXPORT_ALL_DATA', 'EXPORT_OWN_DATA']),
+    requireDataAccess(false),
     defaultCustomerController.exportDefaultCustomers,
   );
   
@@ -1831,7 +1836,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.get('/default-customers/renewable',
     authenticateToken,
-    requireRole(['ADMIN', 'OPERATOR']), // 只有管理员和操作员可以查看可续期客户
+    requirePermission('VIEW_RENEWABLE_CUSTOMERS'),
     defaultCustomerController.getRenewableCustomers,
   );
   
@@ -2022,7 +2027,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/renewals',
     authenticateToken,
-    requireRole(['ADMIN', 'OPERATOR']),
+    requirePermission('CREATE_RENEWAL_APPLICATION'),
     validate(renewalValidation.create),
     renewalController.createRenewal,
   );
@@ -2146,6 +2151,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.get('/renewals',
     authenticateToken,
+    requireAnyPermission(['VIEW_ALL_RENEWALS', 'VIEW_OWN_RENEWALS']),
     validateQuery(renewalValidation.query),
     renewalController.getRenewals,
   );
@@ -2341,7 +2347,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/renewals/:renewalId/approve',
     authenticateToken,
-    requireRole(['ADMIN', 'AUDITOR']),
+    requirePermission('APPROVE_RENEWALS'),
     validate(renewalValidation.approve),
     renewalController.approveRenewal,
   );
@@ -2436,7 +2442,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.post('/renewals/batch-approve',
     authenticateToken,
-    requireRole(['ADMIN', 'AUDITOR']),
+    requirePermission('APPROVE_RENEWALS'),
     validate(renewalValidation.batchApprove),
     renewalController.batchApproveRenewals,
   );

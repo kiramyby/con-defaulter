@@ -237,8 +237,9 @@ enum RenewalStatus {
 
 enum UserRole {
   ADMIN
-  OPERATOR
   AUDITOR
+  OPERATOR
+  USER
 }
 
 enum UserStatus {
