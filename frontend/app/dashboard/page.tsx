@@ -155,7 +155,20 @@ export default function Dashboard() {
 
       <div className="container mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-${permissions.getFilteredMenuItems().length}`}>
+          <TabsList className={`grid w-full ${
+            (() => {
+              const menuCount = permissions.getFilteredMenuItems().length;
+              switch (menuCount) {
+                case 1: return "grid-cols-1";
+                case 2: return "grid-cols-2";
+                case 3: return "grid-cols-3";
+                case 4: return "grid-cols-4";
+                case 5: return "grid-cols-5";
+                case 6: return "grid-cols-6";
+                default: return "grid-cols-6";
+              }
+            })()
+          }`}>
             {permissions.hasPermission("VIEW_OVERVIEW") && (
               <TabsTrigger value="overview">概览</TabsTrigger>
             )}
@@ -257,44 +270,50 @@ export default function Dashboard() {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setActiveTab("reasons")}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    违约原因管理
-                  </CardTitle>
-                  <CardDescription>维护和管理违约原因列表</CardDescription>
-                </CardHeader>
-              </Card>
+              {permissions.hasPermission("VIEW_DEFAULT_REASONS") && (
+                <Card
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setActiveTab("reasons")}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      违约原因管理
+                    </CardTitle>
+                    <CardDescription>维护和管理违约原因列表</CardDescription>
+                  </CardHeader>
+                </Card>
+              )}
 
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setActiveTab("applications")}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-primary" />
-                    违约认定申请
-                  </CardTitle>
-                  <CardDescription>提交新的违约认定申请</CardDescription>
-                </CardHeader>
-              </Card>
+              {permissions.hasAnyPermission(["CREATE_DEFAULT_APPLICATION", "VIEW_ALL_APPLICATIONS", "VIEW_OWN_APPLICATIONS"]) && (
+                <Card
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setActiveTab("applications")}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-primary" />
+                      违约认定申请
+                    </CardTitle>
+                    <CardDescription>提交新的违约认定申请</CardDescription>
+                  </CardHeader>
+                </Card>
+              )}
 
-              <Card
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setActiveTab("statistics")}
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    统计分析
-                  </CardTitle>
-                  <CardDescription>查看违约趋势和统计数据</CardDescription>
-                </CardHeader>
-              </Card>
+              {permissions.hasAnyPermission(["VIEW_BASIC_STATISTICS", "VIEW_STATISTICS", "ADVANCED_ANALYTICS"]) && (
+                <Card
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setActiveTab("statistics")}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                      统计分析
+                    </CardTitle>
+                    <CardDescription>查看违约趋势和统计数据</CardDescription>
+                  </CardHeader>
+                </Card>
+              )}
             </div>
           </TabsContent>
 
