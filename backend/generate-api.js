@@ -1,6 +1,7 @@
-import swaggerJsdoc from 'swagger-jsdoc';
+const swaggerJsdoc = require('swagger-jsdoc');
+const fs = require('fs');
 
-const options: swaggerJsdoc.Options = {
+const options = {
   definition: {
     openapi: '3.0.0',
     info: {
@@ -245,7 +246,36 @@ const options: swaggerJsdoc.Options = {
       },
     ],
   },
-  apis: ['./src/routes/*.ts'], // 扫描路由文件中的注释
+  apis: ['./src/routes/*.ts'],
 };
 
-export const specs = swaggerJsdoc(options);
+try {
+  const specs = swaggerJsdoc(options);
+  fs.writeFileSync('./api.json', JSON.stringify(specs, null, 2), 'utf8');
+  
+  console.log('✅ API文档生成成功: api.json');
+  console.log(`📊 总端点数: ${Object.keys(specs.paths || {}).length}`);
+  
+  // 统计各个模块的端点数量
+  const paths = specs.paths || {};
+  const endpoints = Object.keys(paths);
+  
+  const categories = {
+    '认证管理': endpoints.filter(p => p.startsWith('/auth')).length,
+    '用户管理': endpoints.filter(p => p.startsWith('/users')).length,  
+    '违约原因管理': endpoints.filter(p => p.startsWith('/default-reasons')).length,
+    '违约申请管理': endpoints.filter(p => p.startsWith('/default-applications')).length,
+    '违约客户查询': endpoints.filter(p => p.startsWith('/default-customers')).length,
+    '重生管理': endpoints.filter(p => p.startsWith('/renewal')).length,
+    '系统': endpoints.filter(p => p.startsWith('/health')).length,
+  };
+  
+  console.log('📋 各模块端点分布:');
+  Object.entries(categories).forEach(([name, count]) => {
+    if (count > 0) console.log(`  - ${name}: ${count}个端点`);
+  });
+  
+} catch (error) {
+  console.error('❌ 生成API文档失败:', error.message);
+  process.exit(1);
+}

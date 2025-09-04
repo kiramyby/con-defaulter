@@ -67,7 +67,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                   type: string
    *                   format: date-time
    */
-  router.get('/health', (req, res) => {
+  router.get('/health', (_, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
@@ -106,45 +106,69 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 access_token:
-   *                   type: string
-   *                   description: 访问令牌
-   *                 refresh_token:
-   *                   type: string
-   *                   description: 刷新令牌
-   *                 expires_in:
+   *                 code:
    *                   type: number
-   *                   description: 令牌过期时间（秒）
-   *                 token_type:
+   *                   example: 200
+   *                 message:
    *                   type: string
-   *                   example: bearer
-   *                 user:
+   *                   example: "登录成功"
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     id:
+   *                     access_token:
    *                       type: string
-   *                     email:
+   *                       description: 访问令牌
+   *                     refresh_token:
    *                       type: string
-   *                     dbId:
+   *                       description: 刷新令牌
+   *                     expires_in:
    *                       type: number
-   *                     username:
+   *                       description: 令牌过期时间（秒）
+   *                     token_type:
    *                       type: string
-   *                     realName:
-   *                       type: string
-   *                     role:
-   *                       type: string
-   *                       enum: [ADMIN, OPERATOR, AUDITOR]
-   *                     status:
-   *                       type: string
-   *                       enum: [ACTIVE, INACTIVE]
-   *                     department:
-   *                       type: string
+   *                       example: bearer
+   *                     user:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         email:
+   *                           type: string
+   *                         dbId:
+   *                           type: number
+   *                         username:
+   *                           type: string
+   *                         realName:
+   *                           type: string
+   *                         role:
+   *                           type: string
+   *                           enum: [ADMIN, OPERATOR, AUDITOR]
+   *                         status:
+   *                           type: string
+   *                           enum: [ACTIVE, INACTIVE]
+   *                         department:
+   *                           type: string
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       400:
    *         description: 参数错误
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       401:
    *         description: 邮箱或密码错误
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 用户已被禁用
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/auth/login',
     validate(authValidation.login),
@@ -163,6 +187,24 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *     responses:
    *       200:
    *         description: 登出成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "登出成功"
+   *                 data:
+   *                   type: object
+   *                   nullable: true
+   *                   example: null
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    */
   router.post('/auth/logout',
     authController.logout,
@@ -195,16 +237,32 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 access_token:
-   *                   type: string
-   *                 refresh_token:
-   *                   type: string
-   *                 expires_in:
+   *                 code:
    *                   type: number
-   *                 token_type:
+   *                   example: 200
+   *                 message:
    *                   type: string
+   *                   example: "刷新成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     access_token:
+   *                       type: string
+   *                     refresh_token:
+   *                       type: string
+   *                     expires_in:
+   *                       type: number
+   *                     token_type:
+   *                       type: string
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 刷新令牌无效或已过期
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/auth/refresh',
     validate(authValidation.refreshToken),
@@ -228,25 +286,41 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 id:
-   *                   type: string
-   *                 email:
-   *                   type: string
-   *                 dbId:
+   *                 code:
    *                   type: number
-   *                 username:
+   *                   example: 200
+   *                 message:
    *                   type: string
-   *                 realName:
+   *                   example: "获取成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                     email:
+   *                       type: string
+   *                     dbId:
+   *                       type: number
+   *                     username:
+   *                       type: string
+   *                     realName:
+   *                       type: string
+   *                     role:
+   *                       type: string
+   *                       enum: [ADMIN, OPERATOR, AUDITOR]
+   *                     status:
+   *                       type: string
+   *                     department:
+   *                       type: string
+   *                 timestamp:
    *                   type: string
-   *                 role:
-   *                   type: string
-   *                   enum: [ADMIN, OPERATOR, AUDITOR]
-   *                 status:
-   *                   type: string
-   *                 department:
-   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/auth/profile',
     authenticateToken,
@@ -302,12 +376,40 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *     responses:
    *       201:
    *         description: 用户创建成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 201
+   *                 message:
+   *                   type: string
+   *                   example: "用户创建成功"
+   *                 data:
+   *                   $ref: '#/components/schemas/User'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       400:
    *         description: 参数错误或用户已存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       401:
    *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/auth/register',
     authenticateToken,
@@ -366,18 +468,38 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               allOf:
-   *                 - $ref: '#/components/schemas/PaginatedResponse'
-   *                 - type: object
-   *                   properties:
-   *                     list:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/User'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取成功"
+   *                 data:
+   *                   allOf:
+   *                     - $ref: '#/components/schemas/PaginatedResponse'
+   *                     - type: object
+   *                       properties:
+   *                         list:
+   *                           type: array
+   *                           items:
+   *                             $ref: '#/components/schemas/User'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/users',
     authenticateToken,
@@ -408,15 +530,43 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/User'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取成功"
+   *                 data:
+   *                   $ref: '#/components/schemas/User'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       400:
    *         description: 用户ID无效
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       401:
    *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       404:
    *         description: 用户不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/users/:userId',
     authenticateToken,
@@ -461,21 +611,49 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 id:
+   *                 code:
    *                   type: number
-   *                 username:
+   *                   example: 200
+   *                 message:
    *                   type: string
-   *                 status:
+   *                   example: "更新成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: number
+   *                     username:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                       enum: [ACTIVE, INACTIVE]
+   *                 timestamp:
    *                   type: string
-   *                   enum: [ACTIVE, INACTIVE]
+   *                   format: date-time
    *       400:
    *         description: 参数错误
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       401:
    *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       404:
    *         description: 用户不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.put('/users/:userId/status',
     authenticateToken,
@@ -525,14 +703,26 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               allOf:
-   *                 - $ref: '#/components/schemas/PaginatedResponse'
-   *                 - type: object
-   *                   properties:
-   *                     list:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/DefaultReason'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   allOf:
+   *                     - $ref: '#/components/schemas/PaginatedResponse'
+   *                     - type: object
+   *                       properties:
+   *                         list:
+   *                           type: array
+   *                           items:
+   *                             $ref: '#/components/schemas/DefaultReason'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    */
   router.get('/default-reasons', 
     validateQuery(defaultReasonValidation.query),
@@ -552,9 +742,26 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: array
-   *               items:
-   *                 $ref: '#/components/schemas/DefaultReason'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: number
+   *                       reason:
+   *                         type: string
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    */
   router.get('/default-reasons/enabled', 
     defaultReasonController.getEnabledReasons,
@@ -580,11 +787,31 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/DefaultReason'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   $ref: '#/components/schemas/DefaultReason'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       400:
    *         description: 无效的ID
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       404:
    *         description: 违约原因不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/default-reasons/:id', 
     defaultReasonController.getReasonById,
@@ -630,13 +857,37 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/DefaultReason'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 201
+   *                 message:
+   *                   type: string
+   *                   example: "创建成功"
+   *                 data:
+   *                   $ref: '#/components/schemas/DefaultReason'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       400:
    *         description: 参数验证失败
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/default-reasons',
     authenticateToken,
@@ -645,6 +896,89 @@ const initializeRoutes = (prisma: PrismaClient) => {
     defaultReasonController.createReason,
   );
   
+  /**
+   * @swagger
+   * /default-reasons/{id}:
+   *   put:
+   *     tags: [违约原因管理]
+   *     summary: 更新违约原因
+   *     description: 更新指定违约原因的信息，需要ADMIN或OPERATOR权限
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: 违约原因ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - reason
+   *               - detail
+   *             properties:
+   *               reason:
+   *                 type: string
+   *                 maxLength: 255
+   *                 description: 违约原因名称
+   *               detail:
+   *                 type: string
+   *                 description: 详细描述
+   *               enabled:
+   *                 type: boolean
+   *                 description: 是否启用
+   *               sortOrder:
+   *                 type: integer
+   *                 description: 排序顺序
+   *     responses:
+   *       200:
+   *         description: 更新成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "更新成功"
+   *                 data:
+   *                   $ref: '#/components/schemas/DefaultReason'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: 参数验证失败
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       401:
+   *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: 违约原因不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   router.put('/default-reasons/:id',
     authenticateToken,
     requireRole(['ADMIN', 'OPERATOR']),
@@ -652,12 +986,141 @@ const initializeRoutes = (prisma: PrismaClient) => {
     defaultReasonController.updateReason,
   );
   
+  /**
+   * @swagger
+   * /default-reasons/{id}:
+   *   delete:
+   *     tags: [违约原因管理]
+   *     summary: 删除违约原因
+   *     description: 删除指定的违约原因，需要ADMIN权限
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: 违约原因ID
+   *     responses:
+   *       200:
+   *         description: 删除成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "删除成功"
+   *                 data:
+   *                   type: object
+   *                   nullable: true
+   *                   example: null
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       401:
+   *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: 违约原因不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       409:
+   *         description: 违约原因正在被使用，无法删除
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   router.delete('/default-reasons/:id',
     authenticateToken,
     requireRole(['ADMIN']),
     defaultReasonController.deleteReason,
   );
   
+  /**
+   * @swagger
+   * /default-reasons/batch-status:
+   *   post:
+   *     tags: [违约原因管理]
+   *     summary: 批量更新违约原因状态
+   *     description: 批量启用或禁用违约原因，需要ADMIN权限
+   *     security:
+   *       - BearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - ids
+   *               - enabled
+   *             properties:
+   *               ids:
+   *                 type: array
+   *                 items:
+   *                   type: integer
+   *                 minItems: 1
+   *                 description: 违约原因ID列表
+   *               enabled:
+   *                 type: boolean
+   *                 description: 启用状态
+   *     responses:
+   *       200:
+   *         description: 批量更新成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "批量更新成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     successCount:
+   *                       type: number
+   *                       description: 成功更新数量
+   *                     failCount:
+   *                       type: number
+   *                       description: 失败更新数量
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       401:
+   *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   router.post('/default-reasons/batch-status',
     authenticateToken,
     requireRole(['ADMIN']),
@@ -722,11 +1185,31 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/DefaultApplication'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 201
+   *                 message:
+   *                   type: string
+   *                   example: "申请创建成功"
+   *                 data:
+   *                   $ref: '#/components/schemas/DefaultApplication'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/default-applications',
     authenticateToken,
@@ -800,18 +1283,38 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               allOf:
-   *                 - $ref: '#/components/schemas/PaginatedResponse'
-   *                 - type: object
-   *                   properties:
-   *                     list:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/DefaultApplication'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   allOf:
+   *                     - $ref: '#/components/schemas/PaginatedResponse'
+   *                     - type: object
+   *                       properties:
+   *                         list:
+   *                           type: array
+   *                           items:
+   *                             $ref: '#/components/schemas/DefaultApplication'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/default-applications',
     authenticateToken,
@@ -844,55 +1347,79 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 applicationId:
-   *                   type: string
-   *                 customerId:
+   *                 code:
    *                   type: number
-   *                 customerName:
+   *                   example: 200
+   *                 message:
    *                   type: string
-   *                 latestExternalRating:
-   *                   type: string
-   *                 defaultReasons:
-   *                   type: array
-   *                   items:
-   *                     type: number
-   *                 severity:
-   *                   type: string
-   *                   enum: [HIGH, MEDIUM, LOW]
-   *                 remark:
-   *                   type: string
-   *                 attachments:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       fileName:
-   *                         type: string
-   *                       fileUrl:
-   *                         type: string
-   *                       fileSize:
+   *                   example: "查询成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     applicationId:
+   *                       type: string
+   *                     customerId:
+   *                       type: number
+   *                     customerName:
+   *                       type: string
+   *                     latestExternalRating:
+   *                       type: string
+   *                     defaultReasons:
+   *                       type: array
+   *                       items:
    *                         type: number
-   *                 applicant:
-   *                   type: string
-   *                 status:
-   *                   type: string
-   *                   enum: [PENDING, APPROVED, REJECTED]
-   *                 createTime:
+   *                     severity:
+   *                       type: string
+   *                       enum: [HIGH, MEDIUM, LOW]
+   *                     remark:
+   *                       type: string
+   *                     attachments:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           fileName:
+   *                             type: string
+   *                           fileUrl:
+   *                             type: string
+   *                           fileSize:
+   *                             type: number
+   *                     applicant:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                       enum: [PENDING, APPROVED, REJECTED]
+   *                     createTime:
+   *                       type: string
+   *                       format: date-time
+   *                     approveTime:
+   *                       type: string
+   *                       format: date-time
+   *                     approver:
+   *                       type: string
+   *                     approveRemark:
+   *                       type: string
+   *                 timestamp:
    *                   type: string
    *                   format: date-time
-   *                 approveTime:
-   *                   type: string
-   *                   format: date-time
-   *                 approver:
-   *                   type: string
-   *                 approveRemark:
-   *                   type: string
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       404:
    *         description: 申请不存在或无权限访问
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/default-applications/:applicationId',
     authenticateToken,
@@ -939,22 +1466,46 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 applicationId:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
    *                   type: string
-   *                 status:
-   *                   type: string
-   *                   enum: [APPROVED, REJECTED]
-   *                 approver:
-   *                   type: string
-   *                 approveTime:
+   *                   example: "审核成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     applicationId:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                       enum: [APPROVED, REJECTED]
+   *                     approver:
+   *                       type: string
+   *                     approveTime:
+   *                       type: string
+   *                       format: date-time
+   *                 timestamp:
    *                   type: string
    *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       404:
    *         description: 申请不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/default-applications/:applicationId/approve',
     authenticateToken,
@@ -1007,27 +1558,47 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 successCount:
+   *                 code:
    *                   type: number
-   *                   description: 成功处理数量
-   *                 failCount:
-   *                   type: number
-   *                   description: 失败处理数量
-   *                 details:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       applicationId:
-   *                         type: string
-   *                       success:
-   *                         type: boolean
-   *                       message:
-   *                         type: string
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "批量审核完成"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     successCount:
+   *                       type: number
+   *                       description: 成功处理数量
+   *                     failCount:
+   *                       type: number
+   *                       description: 失败处理数量
+   *                     details:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           applicationId:
+   *                             type: string
+   *                           success:
+   *                             type: boolean
+   *                           message:
+   *                             type: string
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/default-applications/batch-approve',
     authenticateToken,
@@ -1092,18 +1663,38 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               allOf:
-   *                 - $ref: '#/components/schemas/PaginatedResponse'
-   *                 - type: object
-   *                   properties:
-   *                     list:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/DefaultCustomer'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   allOf:
+   *                     - $ref: '#/components/schemas/PaginatedResponse'
+   *                     - type: object
+   *                       properties:
+   *                         list:
+   *                           type: array
+   *                           items:
+   *                             $ref: '#/components/schemas/DefaultCustomer'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/default-customers',
     authenticateToken,
@@ -1205,18 +1796,38 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               allOf:
-   *                 - $ref: '#/components/schemas/PaginatedResponse'
-   *                 - type: object
-   *                   properties:
-   *                     list:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/DefaultCustomer'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   allOf:
+   *                     - $ref: '#/components/schemas/PaginatedResponse'
+   *                     - type: object
+   *                       properties:
+   *                         list:
+   *                           type: array
+   *                           items:
+   *                             $ref: '#/components/schemas/DefaultCustomer'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/default-customers/renewable',
     authenticateToken,
@@ -1246,13 +1857,37 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/DefaultCustomer'
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   $ref: '#/components/schemas/DefaultCustomer'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       404:
    *         description: 违约客户不存在或无权限访问
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/default-customers/:customerId',
     authenticateToken,
@@ -1275,19 +1910,31 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: array
-   *               items:
-   *                 type: object
-   *                 properties:
-   *                   id:
-   *                     type: number
-   *                     description: 重生原因ID
-   *                   reason:
-   *                     type: string
-   *                     description: 重生原因名称
-   *                   enabled:
-   *                     type: boolean
-   *                     description: 是否启用
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: number
+   *                         description: 重生原因ID
+   *                       reason:
+   *                         type: string
+   *                         description: 重生原因名称
+   *                       enabled:
+   *                         type: boolean
+   *                         description: 是否启用
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    */
   router.get('/renewal-reasons',
     renewalController.getRenewalReasons,
@@ -1330,24 +1977,48 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 renewalId:
-   *                   type: string
-   *                 customerId:
+   *                 code:
    *                   type: number
-   *                 customerName:
+   *                   example: 201
+   *                 message:
    *                   type: string
-   *                 status:
-   *                   type: string
-   *                   enum: [PENDING]
-   *                 createTime:
+   *                   example: "申请创建成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     renewalId:
+   *                       type: string
+   *                     customerId:
+   *                       type: number
+   *                     customerName:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                       enum: [PENDING]
+   *                     createTime:
+   *                       type: string
+   *                       format: date-time
+   *                 timestamp:
    *                   type: string
    *                   format: date-time
    *       400:
    *         description: 参数错误或客户状态不符合要求
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/renewals',
     authenticateToken,
@@ -1415,47 +2086,63 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *         content:
    *           application/json:
    *             schema:
-   *               allOf:
-   *                 - $ref: '#/components/schemas/PaginatedResponse'
-   *                 - type: object
-   *                   properties:
-   *                     list:
-   *                       type: array
-   *                       items:
-   *                         type: object
-   *                         properties:
-   *                           renewalId:
-   *                             type: string
-   *                           customerId:
-   *                             type: number
-   *                           customerName:
-   *                             type: string
-   *                           renewalReason:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "查询成功"
+   *                 data:
+   *                   allOf:
+   *                     - $ref: '#/components/schemas/PaginatedResponse'
+   *                     - type: object
+   *                       properties:
+   *                         list:
+   *                           type: array
+   *                           items:
    *                             type: object
    *                             properties:
-   *                               id:
-   *                                 type: number
-   *                               reason:
+   *                               renewalId:
    *                                 type: string
-   *                           status:
-   *                             type: string
-   *                             enum: [PENDING, APPROVED, REJECTED]
-   *                           remark:
-   *                             type: string
-   *                           applicant:
-   *                             type: string
-   *                           createTime:
-   *                             type: string
-   *                             format: date-time
-   *                           approver:
-   *                             type: string
-   *                           approveTime:
-   *                             type: string
-   *                             format: date-time
-   *                           approveRemark:
-   *                             type: string
+   *                               customerId:
+   *                                 type: number
+   *                               customerName:
+   *                                 type: string
+   *                               renewalReason:
+   *                                 type: object
+   *                                 properties:
+   *                                   id:
+   *                                     type: number
+   *                                   reason:
+   *                                     type: string
+   *                               status:
+   *                                 type: string
+   *                                 enum: [PENDING, APPROVED, REJECTED]
+   *                               remark:
+   *                                 type: string
+   *                               applicant:
+   *                                 type: string
+   *                               createTime:
+   *                                 type: string
+   *                                 format: date-time
+   *                               approver:
+   *                                 type: string
+   *                               approveTime:
+   *                                 type: string
+   *                                 format: date-time
+   *                               approveRemark:
+   *                                 type: string
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/renewals',
     authenticateToken,
@@ -1487,60 +2174,84 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 renewalId:
-   *                   type: string
-   *                 customerId:
+   *                 code:
    *                   type: number
-   *                 customerName:
+   *                   example: 200
+   *                 message:
    *                   type: string
-   *                 customerInfo:
+   *                   example: "查询成功"
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     industry:
+   *                     renewalId:
    *                       type: string
-   *                     region:
-   *                       type: string
-   *                     latestExternalRating:
-   *                       type: string
-   *                 renewalReason:
-   *                   type: object
-   *                   properties:
-   *                     id:
+   *                     customerId:
    *                       type: number
-   *                     reason:
+   *                     customerName:
    *                       type: string
-   *                 originalDefaultReasons:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       id:
-   *                         type: number
-   *                       reason:
-   *                         type: string
-   *                 status:
-   *                   type: string
-   *                   enum: [PENDING, APPROVED, REJECTED]
-   *                 remark:
-   *                   type: string
-   *                 applicant:
-   *                   type: string
-   *                 createTime:
+   *                     customerInfo:
+   *                       type: object
+   *                       properties:
+   *                         industry:
+   *                           type: string
+   *                         region:
+   *                           type: string
+   *                         latestExternalRating:
+   *                           type: string
+   *                     renewalReason:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: number
+   *                         reason:
+   *                           type: string
+   *                     originalDefaultReasons:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: number
+   *                           reason:
+   *                             type: string
+   *                     status:
+   *                       type: string
+   *                       enum: [PENDING, APPROVED, REJECTED]
+   *                     remark:
+   *                       type: string
+   *                     applicant:
+   *                       type: string
+   *                     createTime:
+   *                       type: string
+   *                       format: date-time
+   *                     approver:
+   *                       type: string
+   *                     approveTime:
+   *                       type: string
+   *                       format: date-time
+   *                     approveRemark:
+   *                       type: string
+   *                 timestamp:
    *                   type: string
    *                   format: date-time
-   *                 approver:
-   *                   type: string
-   *                 approveTime:
-   *                   type: string
-   *                   format: date-time
-   *                 approveRemark:
-   *                   type: string
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       404:
    *         description: 申请不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.get('/renewals/:renewalId',
     authenticateToken,
@@ -1587,22 +2298,46 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 renewalId:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
    *                   type: string
-   *                 status:
-   *                   type: string
-   *                   enum: [APPROVED, REJECTED]
-   *                 approver:
-   *                   type: string
-   *                 approveTime:
+   *                   example: "审核成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     renewalId:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                       enum: [APPROVED, REJECTED]
+   *                     approver:
+   *                       type: string
+   *                     approveTime:
+   *                       type: string
+   *                       format: date-time
+   *                 timestamp:
    *                   type: string
    *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       404:
    *         description: 申请不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/renewals/:renewalId/approve',
     authenticateToken,
@@ -1657,27 +2392,47 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 successCount:
+   *                 code:
    *                   type: number
-   *                   description: 成功处理数量
-   *                 failCount:
-   *                   type: number
-   *                   description: 失败处理数量
-   *                 details:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       renewalId:
-   *                         type: string
-   *                       success:
-   *                         type: boolean
-   *                       message:
-   *                         type: string
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "批量审核完成"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     successCount:
+   *                       type: number
+   *                       description: 成功处理数量
+   *                     failCount:
+   *                       type: number
+   *                       description: 失败处理数量
+   *                     details:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           renewalId:
+   *                             type: string
+   *                           success:
+   *                             type: boolean
+   *                           message:
+   *                             type: string
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    *       401:
    *         description: 未授权
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    *       403:
    *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   router.post('/renewals/batch-approve',
     authenticateToken,

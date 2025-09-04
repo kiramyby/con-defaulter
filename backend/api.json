@@ -3,7 +3,7 @@
   "info": {
     "title": "违约客户管理系统 API",
     "version": "1.0.0",
-    "description": "违约客户管理系统的RESTful API接口文档，包含违约重生管理功能",
+    "description": "违约客户管理系统的RESTful API接口文档",
     "contact": {
       "name": "API Support",
       "email": "support@example.com"
@@ -31,21 +31,21 @@
             "type": "number",
             "description": "违约原因ID"
           },
-          "reasonCode": {
+          "reason": {
             "type": "string",
-            "description": "原因代码"
+            "description": "违约原因名称"
           },
-          "reasonName": {
-            "type": "string",
-            "description": "原因名称"
-          },
-          "description": {
+          "detail": {
             "type": "string",
             "description": "详细描述"
           },
-          "isEnabled": {
+          "enabled": {
             "type": "boolean",
             "description": "是否启用"
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "排序顺序"
           },
           "createTime": {
             "type": "string",
@@ -346,6 +346,72 @@
           }
         }
       },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "用户ID"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "realName": {
+            "type": "string",
+            "description": "真实姓名"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "邮箱地址"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号码"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "OPERATOR",
+              "AUDITOR"
+            ],
+            "description": "用户角色"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ],
+            "description": "用户状态"
+          },
+          "department": {
+            "type": "string",
+            "description": "部门"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updateTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          },
+          "lastLoginTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "最后登录时间"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "创建人"
+          }
+        }
+      },
       "Error": {
         "type": "object",
         "properties": {
@@ -396,6 +462,10 @@
     {
       "name": "认证管理",
       "description": "用户登录、登出、令牌管理等认证相关接口"
+    },
+    {
+      "name": "用户管理",
+      "description": "系统用户的查询和管理"
     },
     {
       "name": "违约原因管理",
@@ -487,59 +557,76 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "access_token": {
-                      "type": "string",
-                      "description": "访问令牌"
-                    },
-                    "refresh_token": {
-                      "type": "string",
-                      "description": "刷新令牌"
-                    },
-                    "expires_in": {
+                    "code": {
                       "type": "number",
-                      "description": "令牌过期时间（秒）"
+                      "example": 200
                     },
-                    "token_type": {
+                    "message": {
                       "type": "string",
-                      "example": "bearer"
+                      "example": "登录成功"
                     },
-                    "user": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "email": {
-                          "type": "string"
-                        },
-                        "dbId": {
-                          "type": "number"
-                        },
-                        "username": {
-                          "type": "string"
-                        },
-                        "realName": {
-                          "type": "string"
-                        },
-                        "role": {
+                        "access_token": {
                           "type": "string",
-                          "enum": [
-                            "ADMIN",
-                            "OPERATOR",
-                            "AUDITOR"
-                          ]
+                          "description": "访问令牌"
                         },
-                        "status": {
+                        "refresh_token": {
                           "type": "string",
-                          "enum": [
-                            "ACTIVE",
-                            "INACTIVE"
-                          ]
+                          "description": "刷新令牌"
                         },
-                        "department": {
-                          "type": "string"
+                        "expires_in": {
+                          "type": "number",
+                          "description": "令牌过期时间（秒）"
+                        },
+                        "token_type": {
+                          "type": "string",
+                          "example": "bearer"
+                        },
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "dbId": {
+                              "type": "number"
+                            },
+                            "username": {
+                              "type": "string"
+                            },
+                            "realName": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "ADMIN",
+                                "OPERATOR",
+                                "AUDITOR"
+                              ]
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "ACTIVE",
+                                "INACTIVE"
+                              ]
+                            },
+                            "department": {
+                              "type": "string"
+                            }
+                          }
                         }
                       }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
                 }
@@ -547,13 +634,34 @@
             }
           },
           "400": {
-            "description": "参数错误"
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "401": {
-            "description": "邮箱或密码错误"
+            "description": "邮箱或密码错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "用户已被禁用"
+            "description": "用户已被禁用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -572,7 +680,33 @@
         ],
         "responses": {
           "200": {
-            "description": "登出成功"
+            "description": "登出成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "登出成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -611,17 +745,34 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "access_token": {
-                      "type": "string"
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    "refresh_token": {
-                      "type": "string"
+                    "message": {
+                      "type": "string",
+                      "example": "刷新成功"
                     },
-                    "expires_in": {
-                      "type": "number"
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "access_token": {
+                          "type": "string"
+                        },
+                        "refresh_token": {
+                          "type": "string"
+                        },
+                        "expires_in": {
+                          "type": "number"
+                        },
+                        "token_type": {
+                          "type": "string"
+                        }
+                      }
                     },
-                    "token_type": {
-                      "type": "string"
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
                 }
@@ -629,7 +780,14 @@
             }
           },
           "401": {
-            "description": "刷新令牌无效或已过期"
+            "description": "刷新令牌无效或已过期",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -654,34 +812,51 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string"
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    "email": {
-                      "type": "string"
-                    },
-                    "dbId": {
-                      "type": "number"
-                    },
-                    "username": {
-                      "type": "string"
-                    },
-                    "realName": {
-                      "type": "string"
-                    },
-                    "role": {
+                    "message": {
                       "type": "string",
-                      "enum": [
-                        "ADMIN",
-                        "OPERATOR",
-                        "AUDITOR"
-                      ]
+                      "example": "获取成功"
                     },
-                    "status": {
-                      "type": "string"
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "dbId": {
+                          "type": "number"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "realName": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "ADMIN",
+                            "OPERATOR",
+                            "AUDITOR"
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "department": {
+                          "type": "string"
+                        }
+                      }
                     },
-                    "department": {
-                      "type": "string"
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
                 }
@@ -689,7 +864,14 @@
             }
           },
           "401": {
-            "description": "未登录"
+            "description": "未登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -761,16 +943,421 @@
         },
         "responses": {
           "201": {
-            "description": "用户创建成功"
+            "description": "用户创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 201
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "用户创建成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
-            "description": "参数错误或用户已存在"
+            "description": "参数错误或用户已存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "401": {
-            "description": "未登录"
+            "description": "未登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "获取用户列表",
+        "description": "获取系统中所有用户的分页列表，支持条件查询。仅限ADMIN权限。",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "每页大小"
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ADMIN",
+                "OPERATOR",
+                "AUDITOR"
+              ]
+            },
+            "description": "用户角色"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE"
+              ]
+            },
+            "description": "用户状态"
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "schema": {
+              "type": "string"
+            },
+            "description": "关键字搜索（用户名、姓名、邮箱、部门）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "获取成功"
+                    },
+                    "data": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginatedResponse"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "list": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/User"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "获取用户详情",
+        "description": "根据用户ID获取用户详细信息。仅限ADMIN权限。",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "用户ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "获取成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "用户ID无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}/status": {
+      "put": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "更新用户状态",
+        "description": "更新指定用户的状态（启用/禁用）。仅限ADMIN权限。",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "用户ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "INACTIVE"
+                    ],
+                    "description": "用户状态"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "更新成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "number"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "INACTIVE"
+                          ]
+                        }
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -827,22 +1414,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/PaginatedResponse"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "list": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/DefaultReason"
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginatedResponse"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "list": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/DefaultReason"
+                              }
+                            }
                           }
                         }
-                      }
+                      ]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
-                  ]
+                  }
                 }
               }
             }
@@ -901,19 +1505,57 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DefaultReason"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 201
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "创建成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DefaultReason"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
                 }
               }
             }
           },
           "400": {
-            "description": "参数验证失败"
+            "description": "参数验证失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -931,9 +1573,34 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DefaultReason"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "number"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
                   }
                 }
               }
@@ -966,16 +1633,367 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DefaultReason"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DefaultReason"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
                 }
               }
             }
           },
           "400": {
-            "description": "无效的ID"
+            "description": "无效的ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "404": {
-            "description": "违约原因不存在"
+            "description": "违约原因不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "违约原因管理"
+        ],
+        "summary": "更新违约原因",
+        "description": "更新指定违约原因的信息，需要ADMIN或OPERATOR权限",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "违约原因ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason",
+                  "detail"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "违约原因名称"
+                  },
+                  "detail": {
+                    "type": "string",
+                    "description": "详细描述"
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "是否启用"
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "description": "排序顺序"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "更新成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DefaultReason"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数验证失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "违约原因不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "违约原因管理"
+        ],
+        "summary": "删除违约原因",
+        "description": "删除指定的违约原因，需要ADMIN权限",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "违约原因ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "删除成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "nullable": true,
+                      "example": null
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "违约原因不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "违约原因正在被使用，无法删除",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/default-reasons/batch-status": {
+      "post": {
+        "tags": [
+          "违约原因管理"
+        ],
+        "summary": "批量更新违约原因状态",
+        "description": "批量启用或禁用违约原因，需要ADMIN权限",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ids",
+                  "enabled"
+                ],
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "minItems": 1,
+                    "description": "违约原因ID列表"
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "启用状态"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "批量更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "批量更新成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "successCount": {
+                          "type": "number",
+                          "description": "成功更新数量"
+                        },
+                        "failCount": {
+                          "type": "number",
+                          "description": "失败更新数量"
+                        }
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1061,16 +2079,47 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DefaultApplication"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 201
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "申请创建成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DefaultApplication"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
                 }
               }
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -1174,31 +2223,62 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/PaginatedResponse"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "list": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/DefaultApplication"
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginatedResponse"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "list": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/DefaultApplication"
+                              }
+                            }
                           }
                         }
-                      }
+                      ]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
-                  ]
+                  }
                 }
               }
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1234,76 +2314,93 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "applicationId": {
-                      "type": "string"
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    "customerId": {
-                      "type": "number"
-                    },
-                    "customerName": {
-                      "type": "string"
-                    },
-                    "latestExternalRating": {
-                      "type": "string"
-                    },
-                    "defaultReasons": {
-                      "type": "array",
-                      "items": {
-                        "type": "number"
-                      }
-                    },
-                    "severity": {
+                    "message": {
                       "type": "string",
-                      "enum": [
-                        "HIGH",
-                        "MEDIUM",
-                        "LOW"
-                      ]
+                      "example": "查询成功"
                     },
-                    "remark": {
-                      "type": "string"
-                    },
-                    "attachments": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "fileName": {
-                            "type": "string"
-                          },
-                          "fileUrl": {
-                            "type": "string"
-                          },
-                          "fileSize": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "applicationId": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "number"
+                        },
+                        "customerName": {
+                          "type": "string"
+                        },
+                        "latestExternalRating": {
+                          "type": "string"
+                        },
+                        "defaultReasons": {
+                          "type": "array",
+                          "items": {
                             "type": "number"
                           }
+                        },
+                        "severity": {
+                          "type": "string",
+                          "enum": [
+                            "HIGH",
+                            "MEDIUM",
+                            "LOW"
+                          ]
+                        },
+                        "remark": {
+                          "type": "string"
+                        },
+                        "attachments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "fileName": {
+                                "type": "string"
+                              },
+                              "fileUrl": {
+                                "type": "string"
+                              },
+                              "fileSize": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        },
+                        "applicant": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "APPROVED",
+                            "REJECTED"
+                          ]
+                        },
+                        "createTime": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "approveTime": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "approver": {
+                          "type": "string"
+                        },
+                        "approveRemark": {
+                          "type": "string"
                         }
                       }
                     },
-                    "applicant": {
-                      "type": "string"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "PENDING",
-                        "APPROVED",
-                        "REJECTED"
-                      ]
-                    },
-                    "createTime": {
+                    "timestamp": {
                       "type": "string",
                       "format": "date-time"
-                    },
-                    "approveTime": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "approver": {
-                      "type": "string"
-                    },
-                    "approveRemark": {
-                      "type": "string"
                     }
                   }
                 }
@@ -1311,13 +2408,34 @@
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "404": {
-            "description": "申请不存在或无权限访问"
+            "description": "申请不存在或无权限访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1376,20 +2494,37 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "applicationId": {
-                      "type": "string"
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    "status": {
+                    "message": {
                       "type": "string",
-                      "enum": [
-                        "APPROVED",
-                        "REJECTED"
-                      ]
+                      "example": "审核成功"
                     },
-                    "approver": {
-                      "type": "string"
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "applicationId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "APPROVED",
+                            "REJECTED"
+                          ]
+                        },
+                        "approver": {
+                          "type": "string"
+                        },
+                        "approveTime": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
                     },
-                    "approveTime": {
+                    "timestamp": {
                       "type": "string",
                       "format": "date-time"
                     }
@@ -1399,13 +2534,34 @@
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "404": {
-            "description": "申请不存在"
+            "description": "申请不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1470,30 +2626,47 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "successCount": {
+                    "code": {
                       "type": "number",
-                      "description": "成功处理数量"
+                      "example": 200
                     },
-                    "failCount": {
-                      "type": "number",
-                      "description": "失败处理数量"
+                    "message": {
+                      "type": "string",
+                      "example": "批量审核完成"
                     },
-                    "details": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "applicationId": {
-                            "type": "string"
-                          },
-                          "success": {
-                            "type": "boolean"
-                          },
-                          "message": {
-                            "type": "string"
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "successCount": {
+                          "type": "number",
+                          "description": "成功处理数量"
+                        },
+                        "failCount": {
+                          "type": "number",
+                          "description": "失败处理数量"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "applicationId": {
+                                "type": "string"
+                              },
+                              "success": {
+                                "type": "boolean"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            }
                           }
                         }
                       }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
                 }
@@ -1501,10 +2674,24 @@
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1589,31 +2776,62 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/PaginatedResponse"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "list": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/DefaultCustomer"
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginatedResponse"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "list": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/DefaultCustomer"
+                              }
+                            }
                           }
                         }
-                      }
+                      ]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
-                  ]
+                  }
                 }
               }
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1749,31 +2967,62 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/PaginatedResponse"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "list": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/DefaultCustomer"
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginatedResponse"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "list": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/DefaultCustomer"
+                              }
+                            }
                           }
                         }
-                      }
+                      ]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
-                  ]
+                  }
                 }
               }
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1807,19 +3056,57 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DefaultCustomer"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DefaultCustomer"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
                 }
               }
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "404": {
-            "description": "违约客户不存在或无权限访问"
+            "description": "违约客户不存在或无权限访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1837,22 +3124,39 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "number",
-                        "description": "重生原因ID"
-                      },
-                      "reason": {
-                        "type": "string",
-                        "description": "重生原因名称"
-                      },
-                      "enabled": {
-                        "type": "boolean",
-                        "description": "是否启用"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "number",
+                            "description": "重生原因ID"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "description": "重生原因名称"
+                          },
+                          "enabled": {
+                            "type": "boolean",
+                            "description": "是否启用"
+                          }
+                        }
                       }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
                 }
@@ -1911,22 +3215,39 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "renewalId": {
-                      "type": "string"
+                    "code": {
+                      "type": "number",
+                      "example": 201
                     },
-                    "customerId": {
-                      "type": "number"
-                    },
-                    "customerName": {
-                      "type": "string"
-                    },
-                    "status": {
+                    "message": {
                       "type": "string",
-                      "enum": [
-                        "PENDING"
-                      ]
+                      "example": "申请创建成功"
                     },
-                    "createTime": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "renewalId": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "number"
+                        },
+                        "customerName": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING"
+                          ]
+                        },
+                        "createTime": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "timestamp": {
                       "type": "string",
                       "format": "date-time"
                     }
@@ -1936,13 +3257,34 @@
             }
           },
           "400": {
-            "description": "参数错误或客户状态不符合要求"
+            "description": "参数错误或客户状态不符合要求",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -2033,78 +3375,102 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/PaginatedResponse"
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "list": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "renewalId": {
-                                "type": "string"
-                              },
-                              "customerId": {
-                                "type": "number"
-                              },
-                              "customerName": {
-                                "type": "string"
-                              },
-                              "renewalReason": {
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/PaginatedResponse"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "list": {
+                              "type": "array",
+                              "items": {
                                 "type": "object",
                                 "properties": {
-                                  "id": {
+                                  "renewalId": {
+                                    "type": "string"
+                                  },
+                                  "customerId": {
                                     "type": "number"
                                   },
-                                  "reason": {
+                                  "customerName": {
+                                    "type": "string"
+                                  },
+                                  "renewalReason": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "number"
+                                      },
+                                      "reason": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "PENDING",
+                                      "APPROVED",
+                                      "REJECTED"
+                                    ]
+                                  },
+                                  "remark": {
+                                    "type": "string"
+                                  },
+                                  "applicant": {
+                                    "type": "string"
+                                  },
+                                  "createTime": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "approver": {
+                                    "type": "string"
+                                  },
+                                  "approveTime": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "approveRemark": {
                                     "type": "string"
                                   }
                                 }
-                              },
-                              "status": {
-                                "type": "string",
-                                "enum": [
-                                  "PENDING",
-                                  "APPROVED",
-                                  "REJECTED"
-                                ]
-                              },
-                              "remark": {
-                                "type": "string"
-                              },
-                              "applicant": {
-                                "type": "string"
-                              },
-                              "createTime": {
-                                "type": "string",
-                                "format": "date-time"
-                              },
-                              "approver": {
-                                "type": "string"
-                              },
-                              "approveTime": {
-                                "type": "string",
-                                "format": "date-time"
-                              },
-                              "approveRemark": {
-                                "type": "string"
                               }
                             }
                           }
                         }
-                      }
+                      ]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
-                  ]
+                  }
                 }
               }
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2140,81 +3506,98 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "renewalId": {
-                      "type": "string"
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    "customerId": {
-                      "type": "number"
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
                     },
-                    "customerName": {
-                      "type": "string"
-                    },
-                    "customerInfo": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "industry": {
+                        "renewalId": {
                           "type": "string"
                         },
-                        "region": {
-                          "type": "string"
-                        },
-                        "latestExternalRating": {
-                          "type": "string"
-                        }
-                      }
-                    },
-                    "renewalReason": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
+                        "customerId": {
                           "type": "number"
                         },
-                        "reason": {
+                        "customerName": {
+                          "type": "string"
+                        },
+                        "customerInfo": {
+                          "type": "object",
+                          "properties": {
+                            "industry": {
+                              "type": "string"
+                            },
+                            "region": {
+                              "type": "string"
+                            },
+                            "latestExternalRating": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "renewalReason": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "number"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "originalDefaultReasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "number"
+                              },
+                              "reason": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "APPROVED",
+                            "REJECTED"
+                          ]
+                        },
+                        "remark": {
+                          "type": "string"
+                        },
+                        "applicant": {
+                          "type": "string"
+                        },
+                        "createTime": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "approver": {
+                          "type": "string"
+                        },
+                        "approveTime": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "approveRemark": {
                           "type": "string"
                         }
                       }
                     },
-                    "originalDefaultReasons": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "number"
-                          },
-                          "reason": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "PENDING",
-                        "APPROVED",
-                        "REJECTED"
-                      ]
-                    },
-                    "remark": {
-                      "type": "string"
-                    },
-                    "applicant": {
-                      "type": "string"
-                    },
-                    "createTime": {
+                    "timestamp": {
                       "type": "string",
                       "format": "date-time"
-                    },
-                    "approver": {
-                      "type": "string"
-                    },
-                    "approveTime": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "approveRemark": {
-                      "type": "string"
                     }
                   }
                 }
@@ -2222,13 +3605,34 @@
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "404": {
-            "description": "申请不存在"
+            "description": "申请不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2288,20 +3692,37 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "renewalId": {
-                      "type": "string"
+                    "code": {
+                      "type": "number",
+                      "example": 200
                     },
-                    "status": {
+                    "message": {
                       "type": "string",
-                      "enum": [
-                        "APPROVED",
-                        "REJECTED"
-                      ]
+                      "example": "审核成功"
                     },
-                    "approver": {
-                      "type": "string"
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "renewalId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "APPROVED",
+                            "REJECTED"
+                          ]
+                        },
+                        "approver": {
+                          "type": "string"
+                        },
+                        "approveTime": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
                     },
-                    "approveTime": {
+                    "timestamp": {
                       "type": "string",
                       "format": "date-time"
                     }
@@ -2311,13 +3732,34 @@
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "404": {
-            "description": "申请不存在"
+            "description": "申请不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2384,30 +3826,47 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "successCount": {
+                    "code": {
                       "type": "number",
-                      "description": "成功处理数量"
+                      "example": 200
                     },
-                    "failCount": {
-                      "type": "number",
-                      "description": "失败处理数量"
+                    "message": {
+                      "type": "string",
+                      "example": "批量审核完成"
                     },
-                    "details": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "renewalId": {
-                            "type": "string"
-                          },
-                          "success": {
-                            "type": "boolean"
-                          },
-                          "message": {
-                            "type": "string"
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "successCount": {
+                          "type": "number",
+                          "description": "成功处理数量"
+                        },
+                        "failCount": {
+                          "type": "number",
+                          "description": "失败处理数量"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "renewalId": {
+                                "type": "string"
+                              },
+                              "success": {
+                                "type": "boolean"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            }
                           }
                         }
                       }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
                 }
@@ -2415,10 +3874,24 @@
             }
           },
           "401": {
-            "description": "未授权"
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "403": {
-            "description": "权限不足"
+            "description": "权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
