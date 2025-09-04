@@ -243,6 +243,10 @@ const options: swaggerJsdoc.Options = {
         name: '违约重生管理',
         description: '违约客户重生申请管理',
       },
+      {
+        name: '统计分析',
+        description: '数据统计分析和报表功能',
+      },
     ],
   },
   apis: ['./src/routes/*.ts'], // 扫描路由文件中的注释

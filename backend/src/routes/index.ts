@@ -7,6 +7,7 @@ import { DefaultReasonController } from '../controllers/DefaultReasonController'
 import { DefaultApplicationController } from '../controllers/DefaultApplicationController';
 import { DefaultCustomerController } from '../controllers/DefaultCustomerController';
 import { RenewalController } from '../controllers/RenewalController';
+import { StatisticsController } from '../controllers/StatisticsController';
 
 // Services
 import { DefaultReasonService } from '../services/DefaultReasonService';
@@ -23,6 +24,7 @@ import {
   defaultApplicationValidation,
   renewalValidation,
   userManagementValidation,
+  statisticsValidation,
 } from '../utils/validation';
 
 // Middleware
@@ -45,6 +47,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
   const defaultApplicationController = new DefaultApplicationController(defaultApplicationService);
   const defaultCustomerController = new DefaultCustomerController(defaultCustomerService);
   const renewalController = new RenewalController(renewalService);
+  const statisticsController = new StatisticsController();
 
   /**
    * @swagger
@@ -326,6 +329,160 @@ const initializeRoutes = (prisma: PrismaClient) => {
   router.get('/auth/profile',
     authenticateToken,
     authController.getProfile,
+  );
+
+  /**
+   * @swagger
+   * /auth/profile:
+   *   put:
+   *     tags: [认证管理]
+   *     summary: 更新个人信息
+   *     description: 用户更新自己的基本信息（姓名、手机、部门）
+   *     security:
+   *       - BearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               realName:
+   *                 type: string
+   *                 minLength: 2
+   *                 maxLength: 100
+   *                 description: 真实姓名
+   *               phone:
+   *                 type: string
+   *                 maxLength: 20
+   *                 description: 手机号码
+   *               department:
+   *                 type: string
+   *                 maxLength: 100
+   *                 description: 部门
+   *     responses:
+   *       200:
+   *         description: 更新成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "更新个人信息成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: number
+   *                     username:
+   *                       type: string
+   *                     realName:
+   *                       type: string
+   *                     email:
+   *                       type: string
+   *                     phone:
+   *                       type: string
+   *                     role:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                     department:
+   *                       type: string
+   *                     updateTime:
+   *                       type: string
+   *                       format: date-time
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: 参数错误
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       401:
+   *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.put('/auth/profile',
+    authenticateToken,
+    validate(userManagementValidation.updateUser),
+    authController.updateProfile,
+  );
+
+  /**
+   * @swagger
+   * /auth/password:
+   *   put:
+   *     tags: [认证管理]
+   *     summary: 修改密码
+   *     description: 用户修改自己的登录密码
+   *     security:
+   *       - BearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - currentPassword
+   *               - newPassword
+   *             properties:
+   *               currentPassword:
+   *                 type: string
+   *                 minLength: 6
+   *                 description: 当前密码
+   *               newPassword:
+   *                 type: string
+   *                 minLength: 6
+   *                 description: 新密码（必须包含大小写字母和数字）
+   *     responses:
+   *       200:
+   *         description: 密码修改成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "密码修改成功"
+   *                 data:
+   *                   type: object
+   *                   nullable: true
+   *                   example: null
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: 参数错误或当前密码错误
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       401:
+   *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.put('/auth/password',
+    authenticateToken,
+    validate(authValidation.changePassword),
+    authController.changePassword,
   );
 
 
@@ -663,6 +820,195 @@ const initializeRoutes = (prisma: PrismaClient) => {
     authController.updateUserStatus,
   );
 
+  /**
+   * @swagger
+   * /users/{userId}:
+   *   put:
+   *     tags: [用户管理]
+   *     summary: 更新用户信息
+   *     description: 管理员更新指定用户的基本信息。仅限ADMIN权限。
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: 用户ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               realName:
+   *                 type: string
+   *                 minLength: 2
+   *                 maxLength: 100
+   *                 description: 真实姓名
+   *               phone:
+   *                 type: string
+   *                 maxLength: 20
+   *                 description: 手机号码
+   *               department:
+   *                 type: string
+   *                 maxLength: 100
+   *                 description: 部门
+   *     responses:
+   *       200:
+   *         description: 更新成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "更新用户信息成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: number
+   *                     username:
+   *                       type: string
+   *                     realName:
+   *                       type: string
+   *                     email:
+   *                       type: string
+   *                     phone:
+   *                       type: string
+   *                     role:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                     department:
+   *                       type: string
+   *                     updateTime:
+   *                       type: string
+   *                       format: date-time
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: 参数错误
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       401:
+   *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: 用户不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.put('/users/:userId',
+    authenticateToken,
+    requirePermission('UPDATE_USER'),
+    validate(userManagementValidation.updateUser),
+    authController.updateUser,
+  );
+
+  /**
+   * @swagger
+   * /users/{userId}/password:
+   *   put:
+   *     tags: [用户管理]
+   *     summary: 重置用户密码
+   *     description: 管理员重置指定用户的密码。仅限ADMIN权限。不能重置自己或其他管理员的密码。
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: 用户ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - newPassword
+   *             properties:
+   *               newPassword:
+   *                 type: string
+   *                 minLength: 6
+   *                 description: 新密码（必须包含大小写字母和数字）
+   *     responses:
+   *       200:
+   *         description: 密码重置成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "密码重置成功"
+   *                 data:
+   *                   type: object
+   *                   nullable: true
+   *                   example: null
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: 参数错误
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       401:
+   *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: 用户不存在
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.put('/users/:userId/password',
+    authenticateToken,
+    requirePermission('UPDATE_USER'),
+    validate(userManagementValidation.resetPassword),
+    authController.resetPassword,
+  );
+
   // ==================== 违约原因管理路由 ====================
   
   /**
@@ -767,6 +1113,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                   format: date-time
    */
   router.get('/default-reasons/enabled', 
+    authenticateToken,
+    requirePermission('VIEW_DEFAULT_REASONS'),
     defaultReasonController.getEnabledReasons,
   );
   
@@ -817,6 +1165,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *               $ref: '#/components/schemas/Error'
    */
   router.get('/default-reasons/:id', 
+    authenticateToken,
+    requirePermission('VIEW_DEFAULT_REASONS'),
     defaultReasonController.getReasonById,
   );
   
@@ -1942,6 +2292,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                   format: date-time
    */
   router.get('/renewal-reasons',
+    authenticateToken,
+    requirePermission('VIEW_DEFAULT_REASONS'),
     renewalController.getRenewalReasons,
   );
   
@@ -2261,6 +2613,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    */
   router.get('/renewals/:renewalId',
     authenticateToken,
+    requireAnyPermission(['VIEW_ALL_RENEWALS', 'VIEW_OWN_RENEWALS']),
+    requireDataAccess(true),
     renewalController.getRenewalDetail,
   );
   
@@ -2450,10 +2804,432 @@ const initializeRoutes = (prisma: PrismaClient) => {
   // TODO: 文件上传路由
   // router.post('/files/upload', upload.single('file'), fileController.uploadFile);
 
-  // TODO: 统计分析路由
-  // router.get('/statistics/by-industry', statisticsController.getIndustryStats);
-  // router.get('/statistics/by-region', statisticsController.getRegionStats);
-  // router.get('/statistics/trend', statisticsController.getTrendData);
+  // ==================== 统计分析路由 ====================
+  
+  /**
+   * @swagger
+   * /statistics/overview:
+   *   get:
+   *     tags: [统计分析]
+   *     summary: 获取概览统计数据
+   *     description: 获取系统整体统计概览数据，包括申请数量、客户数量等核心指标
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: year
+   *         schema:
+   *           type: integer
+   *           default: 2024
+   *         description: 统计年份
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取概览统计数据成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     year:
+   *                       type: number
+   *                     defaultApplications:
+   *                       type: object
+   *                       properties:
+   *                         total:
+   *                           type: number
+   *                         pending:
+   *                           type: number
+   *                         approved:
+   *                           type: number
+   *                         rejected:
+   *                           type: number
+   *                     renewalApplications:
+   *                       type: object
+   *                       properties:
+   *                         total:
+   *                           type: number
+   *                         pending:
+   *                           type: number
+   *                         approved:
+   *                           type: number
+   *                         rejected:
+   *                           type: number
+   *                     customers:
+   *                       type: object
+   *                       properties:
+   *                         totalDefault:
+   *                           type: number
+   *                     users:
+   *                       type: object
+   *                       properties:
+   *                         total:
+   *                           type: number
+   *                         active:
+   *                           type: number
+   *       401:
+   *         description: 未登录
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: 权限不足
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.get('/statistics/overview',
+    authenticateToken,
+    requirePermission('VIEW_STATISTICS'),
+    validateQuery(statisticsValidation.byIndustry),
+    statisticsController.getOverviewStatistics,
+  );
+
+  /**
+   * @swagger
+   * /statistics/by-industry:
+   *   get:
+   *     tags: [统计分析]
+   *     summary: 获取按行业统计数据
+   *     description: 获取指定年份按行业维度的统计分析数据，支持违约和重生类型
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: year
+   *         schema:
+   *           type: integer
+   *           default: 2024
+   *         description: 统计年份
+   *       - in: query
+   *         name: type
+   *         schema:
+   *           type: string
+   *           enum: [DEFAULT, RENEWAL]
+   *           default: DEFAULT
+   *         description: 统计类型
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取行业统计数据成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     year:
+   *                       type: number
+   *                     type:
+   *                       type: string
+   *                       enum: [DEFAULT, RENEWAL]
+   *                     total:
+   *                       type: number
+   *                     industries:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           industry:
+   *                             type: string
+   *                           count:
+   *                             type: number
+   *                           percentage:
+   *                             type: number
+   *                           trend:
+   *                             type: string
+   *                             enum: [UP, DOWN, STABLE]
+   */
+  router.get('/statistics/by-industry',
+    authenticateToken,
+    requirePermission('VIEW_STATISTICS'),
+    validateQuery(statisticsValidation.byIndustry),
+    statisticsController.getStatisticsByIndustry,
+  );
+
+  /**
+   * @swagger
+   * /statistics/by-region:
+   *   get:
+   *     tags: [统计分析]
+   *     summary: 获取按区域统计数据
+   *     description: 获取指定年份按区域维度的统计分析数据，支持违约和重生类型
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: year
+   *         schema:
+   *           type: integer
+   *           default: 2024
+   *         description: 统计年份
+   *       - in: query
+   *         name: type
+   *         schema:
+   *           type: string
+   *           enum: [DEFAULT, RENEWAL]
+   *           default: DEFAULT
+   *         description: 统计类型
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取区域统计数据成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     year:
+   *                       type: number
+   *                     type:
+   *                       type: string
+   *                       enum: [DEFAULT, RENEWAL]
+   *                     total:
+   *                       type: number
+   *                     regions:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           region:
+   *                             type: string
+   *                           count:
+   *                             type: number
+   *                           percentage:
+   *                             type: number
+   *                           trend:
+   *                             type: string
+   *                             enum: [UP, DOWN, STABLE]
+   */
+  router.get('/statistics/by-region',
+    authenticateToken,
+    requirePermission('VIEW_STATISTICS'),
+    validateQuery(statisticsValidation.byRegion),
+    statisticsController.getStatisticsByRegion,
+  );
+
+  /**
+   * @swagger
+   * /statistics/trend:
+   *   get:
+   *     tags: [统计分析]
+   *     summary: 获取趋势分析数据
+   *     description: 获取指定时间范围内的趋势分析数据，支持按行业或区域维度分析
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: dimension
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [INDUSTRY, REGION]
+   *         description: 分析维度
+   *       - in: query
+   *         name: target
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: 目标行业或区域名称
+   *       - in: query
+   *         name: startYear
+   *         schema:
+   *           type: integer
+   *           default: 2020
+   *         description: 开始年份
+   *       - in: query
+   *         name: endYear
+   *         schema:
+   *           type: integer
+   *           default: 2024
+   *         description: 结束年份
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取趋势分析数据成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     dimension:
+   *                       type: string
+   *                       enum: [INDUSTRY, REGION]
+   *                     target:
+   *                       type: string
+   *                     trend:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           year:
+   *                             type: number
+   *                           defaultCount:
+   *                             type: number
+   *                           renewalCount:
+   *                             type: number
+   */
+  router.get('/statistics/trend',
+    authenticateToken,
+    requirePermission('ADVANCED_ANALYTICS'),
+    validateQuery(statisticsValidation.trend),
+    statisticsController.getTrendStatistics,
+  );
+
+  /**
+   * @swagger
+   * /statistics/industries:
+   *   get:
+   *     tags: [统计分析]
+   *     summary: 获取可用行业列表
+   *     description: 获取系统中所有可用的行业名称列表，用于趋势分析等功能
+   *     security:
+   *       - BearerAuth: []
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取行业列表成功"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: string
+   */
+  router.get('/statistics/industries',
+    authenticateToken,
+    requirePermission('VIEW_STATISTICS'),
+    statisticsController.getAvailableIndustries,
+  );
+
+  /**
+   * @swagger
+   * /statistics/regions:
+   *   get:
+   *     tags: [统计分析]
+   *     summary: 获取可用区域列表
+   *     description: 获取系统中所有可用的区域名称列表，用于趋势分析等功能
+   *     security:
+   *       - BearerAuth: []
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取区域列表成功"
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: string
+   */
+  router.get('/statistics/regions',
+    authenticateToken,
+    requirePermission('VIEW_STATISTICS'),
+    statisticsController.getAvailableRegions,
+  );
+
+  /**
+   * @swagger
+   * /statistics/export:
+   *   get:
+   *     tags: [统计分析]
+   *     summary: 导出统计报告
+   *     description: 导出指定年份的统计分析报告，包含概览、行业和区域统计数据
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: year
+   *         schema:
+   *           type: integer
+   *           default: 2024
+   *         description: 统计年份
+   *       - in: query
+   *         name: type
+   *         schema:
+   *           type: string
+   *           enum: [DEFAULT, RENEWAL]
+   *           default: DEFAULT
+   *         description: 统计类型
+   *       - in: query
+   *         name: format
+   *         schema:
+   *           type: string
+   *           enum: [excel, json]
+   *           default: excel
+   *         description: 导出格式
+   *     responses:
+   *       200:
+   *         description: 导出成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "导出统计报告成功"
+   *                 data:
+   *                   type: object
+   */
+  router.get('/statistics/export',
+    authenticateToken,
+    requirePermission('EXPORT_STATISTICS'),
+    validateQuery(statisticsValidation.byIndustry),
+    statisticsController.exportStatisticsReport,
+  );
 
   return router;
 };

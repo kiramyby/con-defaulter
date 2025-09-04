@@ -88,14 +88,14 @@ export const renewalValidation = {
   }),
 
   approve: z.object({
-    approved: z.boolean('审核结果必须为布尔值'),
+    approved: z.boolean({ required_error: '审核结果必须为布尔值' }),
     remark: z.string().max(1000, '审核备注不能超过1000个字符').optional(),
   }),
 
   batchApprove: z.object({
     renewals: z.array(z.object({
       renewalId: z.string().min(1, '重生申请ID不能为空'),
-      approved: z.boolean('审核结果必须为布尔值'),
+      approved: z.boolean({ required_error: '审核结果必须为布尔值' }),
       remark: z.string().max(1000, '审核备注不能超过1000个字符').optional(),
     })).min(1, '至少需要审核一个申请').max(100, '单次最多审核100个申请'),
   }),
@@ -189,6 +189,19 @@ export const userManagementValidation = {
     userId: z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, {
       message: '用户ID必须是正整数',
     }),
+  }),
+
+  updateUser: z.object({
+    realName: z.string().min(2, '真实姓名至少2位').max(100, '真实姓名不能超过100位').optional(),
+    phone: z.string().max(20, '手机号码不能超过20位').optional(),
+    department: z.string().max(100, '部门不能超过100位').optional(),
+  }),
+
+  resetPassword: z.object({
+    newPassword: z.string().min(6, '新密码至少6位')
+      .refine(val => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/.test(val), {
+        message: '新密码必须包含大小写字母和数字，至少6位',
+      }),
   }),
 };
 

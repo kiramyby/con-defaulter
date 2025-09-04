@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+import * as bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { ResponseUtil } from '../utils/response';
 import { config } from '../config/env';
@@ -70,12 +70,12 @@ export class AuthController {
 
       const accessToken = jwt.sign(payload, config.JWT_SECRET, {
         expiresIn: config.JWT_EXPIRES_IN,
-      });
+      } as jwt.SignOptions);
 
       const refreshToken = jwt.sign(
         { userId: dbUser.id.toString(), username: dbUser.username },
         config.JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: '7d' } as jwt.SignOptions
       );
 
       // 更新最后登录时间
@@ -189,12 +189,12 @@ export class AuthController {
 
       const newAccessToken = jwt.sign(payload, config.JWT_SECRET, {
         expiresIn: config.JWT_EXPIRES_IN,
-      });
+      } as jwt.SignOptions);
 
       const newRefreshToken = jwt.sign(
         { userId: dbUser.id.toString(), username: dbUser.username },
         config.JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: '7d' } as jwt.SignOptions
       );
 
       logger.info(`令牌刷新成功: ${dbUser.username}`);
@@ -459,6 +459,288 @@ export class AuthController {
     } catch (error: any) {
       logger.error('更新用户状态失败:', error);
       return ResponseUtil.internalError(res, '更新用户状态服务异常');
+    }
+  };
+
+  /**
+   * 更新用户信息（用户更新自己的基本信息）
+   * PUT /api/v1/auth/profile
+   */
+  updateProfile = async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return ResponseUtil.unauthorized(res, '未登录');
+      }
+
+      const { realName, phone, department } = req.body;
+      const userId = req.user.dbId;
+
+      // 构建更新数据
+      const updateData: any = {};
+      if (realName !== undefined) updateData.realName = realName;
+      if (phone !== undefined) updateData.phone = phone;
+      if (department !== undefined) updateData.department = department;
+
+      // 如果没有更新数据
+      if (Object.keys(updateData).length === 0) {
+        return ResponseUtil.badRequest(res, '没有需要更新的信息');
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id: BigInt(userId) },
+        data: updateData,
+        select: {
+          id: true,
+          username: true,
+          realName: true,
+          email: true,
+          phone: true,
+          role: true,
+          status: true,
+          department: true,
+          updateTime: true,
+        },
+      });
+
+      // 记录操作日志
+      await this.prisma.operationLog.create({
+        data: {
+          username: req.user.username,
+          operationType: 'UPDATE',
+          businessType: 'USER_MANAGEMENT',
+          operationDesc: '更新个人信息',
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+        },
+      });
+
+      logger.info(`用户更新个人信息: ${req.user.username}`);
+
+      const result = {
+        id: Number(updatedUser.id),
+        username: updatedUser.username,
+        realName: updatedUser.realName,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        status: updatedUser.status,
+        department: updatedUser.department,
+        updateTime: updatedUser.updateTime.toISOString(),
+      };
+
+      return ResponseUtil.success(res, result, '更新个人信息成功');
+    } catch (error: any) {
+      logger.error('更新个人信息失败:', error);
+      return ResponseUtil.internalError(res, '更新个人信息服务异常');
+    }
+  };
+
+  /**
+   * 管理员更新用户信息
+   * PUT /api/v1/users/:userId
+   */
+  updateUser = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { realName, phone, department } = req.body;
+
+      if (!userId || isNaN(Number(userId))) {
+        return ResponseUtil.badRequest(res, '用户ID无效');
+      }
+
+      const targetUser = await this.prisma.user.findUnique({
+        where: { id: BigInt(userId) },
+        select: { username: true, role: true },
+      });
+
+      if (!targetUser) {
+        return ResponseUtil.notFound(res, '用户不存在');
+      }
+
+      // 构建更新数据
+      const updateData: any = {};
+      if (realName !== undefined) updateData.realName = realName;
+      if (phone !== undefined) updateData.phone = phone;
+      if (department !== undefined) updateData.department = department;
+
+      // 如果没有更新数据
+      if (Object.keys(updateData).length === 0) {
+        return ResponseUtil.badRequest(res, '没有需要更新的信息');
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id: BigInt(userId) },
+        data: updateData,
+        select: {
+          id: true,
+          username: true,
+          realName: true,
+          email: true,
+          phone: true,
+          role: true,
+          status: true,
+          department: true,
+          updateTime: true,
+        },
+      });
+
+      // 记录操作日志
+      await this.prisma.operationLog.create({
+        data: {
+          username: req.user?.username || 'system',
+          operationType: 'UPDATE',
+          businessType: 'USER_MANAGEMENT',
+          operationDesc: `更新用户信息: ${targetUser.username}`,
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+        },
+      });
+
+      logger.info(`管理员更新用户信息: ${targetUser.username} by ${req.user?.username}`);
+
+      const result = {
+        id: Number(updatedUser.id),
+        username: updatedUser.username,
+        realName: updatedUser.realName,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        status: updatedUser.status,
+        department: updatedUser.department,
+        updateTime: updatedUser.updateTime.toISOString(),
+      };
+
+      return ResponseUtil.success(res, result, '更新用户信息成功');
+    } catch (error: any) {
+      logger.error('更新用户信息失败:', error);
+      return ResponseUtil.internalError(res, '更新用户信息服务异常');
+    }
+  };
+
+  /**
+   * 修改密码（用户修改自己的密码）
+   * PUT /api/v1/auth/password
+   */
+  changePassword = async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return ResponseUtil.unauthorized(res, '未登录');
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user.dbId;
+
+      // 获取当前用户的密码哈希
+      const user = await this.prisma.user.findUnique({
+        where: { id: BigInt(userId) },
+        select: { username: true, hashedPassword: true },
+      });
+
+      if (!user || !user.hashedPassword) {
+        return ResponseUtil.unauthorized(res, '用户信息异常');
+      }
+
+      // 验证当前密码
+      const isValidCurrentPassword = await bcrypt.compare(currentPassword, user.hashedPassword);
+      if (!isValidCurrentPassword) {
+        return ResponseUtil.badRequest(res, '当前密码错误');
+      }
+
+      // 检查新密码是否与当前密码相同
+      const isSamePassword = await bcrypt.compare(newPassword, user.hashedPassword);
+      if (isSamePassword) {
+        return ResponseUtil.badRequest(res, '新密码不能与当前密码相同');
+      }
+
+      // 加密新密码
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // 更新密码
+      await this.prisma.user.update({
+        where: { id: BigInt(userId) },
+        data: { hashedPassword: hashedNewPassword },
+      });
+
+      // 记录操作日志
+      await this.prisma.operationLog.create({
+        data: {
+          username: req.user.username,
+          operationType: 'UPDATE',
+          businessType: 'USER_MANAGEMENT',
+          operationDesc: '修改密码',
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+        },
+      });
+
+      logger.info(`用户修改密码: ${req.user.username}`);
+
+      return ResponseUtil.success(res, null, '密码修改成功');
+    } catch (error: any) {
+      logger.error('修改密码失败:', error);
+      return ResponseUtil.internalError(res, '修改密码服务异常');
+    }
+  };
+
+  /**
+   * 重置用户密码（仅限ADMIN）
+   * PUT /api/v1/users/:userId/password
+   */
+  resetPassword = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { newPassword } = req.body;
+
+      if (!userId || isNaN(Number(userId))) {
+        return ResponseUtil.badRequest(res, '用户ID无效');
+      }
+
+      const targetUser = await this.prisma.user.findUnique({
+        where: { id: BigInt(userId) },
+        select: { username: true, role: true },
+      });
+
+      if (!targetUser) {
+        return ResponseUtil.notFound(res, '用户不存在');
+      }
+
+      // 不能重置自己的密码
+      if (req.user?.username === targetUser.username) {
+        return ResponseUtil.badRequest(res, '不能重置自己的密码，请使用修改密码功能');
+      }
+
+      // 不能重置其他管理员密码（除非是超级管理员）
+      if (targetUser.role === 'ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
+        return ResponseUtil.forbidden(res, '无权限重置其他管理员密码');
+      }
+
+      // 加密新密码
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // 更新密码
+      await this.prisma.user.update({
+        where: { id: BigInt(userId) },
+        data: { hashedPassword: hashedNewPassword },
+      });
+
+      // 记录操作日志
+      await this.prisma.operationLog.create({
+        data: {
+          username: req.user?.username || 'system',
+          operationType: 'UPDATE',
+          businessType: 'USER_MANAGEMENT',
+          operationDesc: `重置用户密码: ${targetUser.username}`,
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+        },
+      });
+
+      logger.info(`管理员重置用户密码: ${targetUser.username} by ${req.user?.username}`);
+
+      return ResponseUtil.success(res, null, '密码重置成功');
+    } catch (error: any) {
+      logger.error('重置密码失败:', error);
+      return ResponseUtil.internalError(res, '重置密码服务异常');
     }
   };
 
