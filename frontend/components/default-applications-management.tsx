@@ -383,10 +383,12 @@ export function DefaultApplicationsManagement() {
               <CardTitle>违约认定申请管理</CardTitle>
               <CardDescription>管理违约认定申请的提交、查询和审核流程</CardDescription>
             </div>
-            <Button onClick={() => setActiveTab("submit")} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              新增申请
-            </Button>
+            {permissions.hasPermission("CREATE_DEFAULT_APPLICATION") && (
+              <Button onClick={() => setActiveTab("submit")} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                新增申请
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>

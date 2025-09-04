@@ -79,7 +79,7 @@ interface RenewalApplicationsListResponse {
 export function RenewalManagement() {
   const { user } = useAuth()
   const permissions = usePermissions(user)
-  const [activeTab, setActiveTab] = useState("customers")
+  const [activeTab, setActiveTab] = useState("applications") // 默认选中 "applications" 选项卡
   const [renewableCustomers, setRenewableCustomers] = useState<DefaultCustomer[]>([])
   const [renewalApplications, setRenewalApplications] = useState<RenewalApplication[]>([])
   const [renewalReasons, setRenewalReasons] = useState<RenewalReason[]>([])
@@ -137,6 +137,7 @@ export function RenewalManagement() {
     if (!permissions.hasAnyPermission(["CREATE_RENEWAL_APPLICATION", "VIEW_ALL_RENEWALS", "VIEW_OWN_RENEWALS"])) {
       return
     }
+    console.log("Loading renewable customers...");
     
     setLoading(true)
     try {
@@ -548,8 +549,7 @@ export function RenewalManagement() {
               )}
             </TabsContent>)}
             
-            {permissions.hasPermission("VIEW_RENEWABLE_CUSTOMERS") && (
-              <TabsContent value="applications" className="space-y-4">
+            <TabsContent value="applications" className="space-y-4">
               {/* Application Filters */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg bg-muted/50">
                 <div className="space-y-2">
@@ -611,28 +611,30 @@ export function RenewalManagement() {
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBatchApproval(true)}
-                    disabled={selectedApplications.length === 0 || loading}
-                    className="text-green-600 hover:text-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    批量通过
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBatchApproval(false)}
-                    disabled={selectedApplications.length === 0 || loading}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    批量拒绝
-                  </Button>
-                </div>
+                {permissions.hasPermission("APPROVE_RENEWALS") && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchApproval(true)}
+                      disabled={selectedApplications.length === 0 || loading}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      批量通过
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchApproval(false)}
+                      disabled={selectedApplications.length === 0 || loading}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      批量拒绝
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Applications Table */}
@@ -645,13 +647,13 @@ export function RenewalManagement() {
                           checked={
                             renewalApplications.length > 0 &&
                             renewalApplications
-                              .filter((app) => app.status === "PENDING")
+                              .filter((app) => app.status === "PENDING" && permissions.hasPermission("APPROVE_RENEWALS"))
                               .every((app) => selectedApplications.includes(app.renewalId))
                           }
                           onCheckedChange={(checked) => {
                             if (checked) {
                               const pendingIds = renewalApplications
-                                .filter((app) => app.status === "PENDING")
+                                .filter((app) => app.status === "PENDING" && permissions.hasPermission("APPROVE_RENEWALS"))
                                 .map((app) => app.renewalId)
                               setSelectedApplications(pendingIds)
                             } else {
@@ -689,7 +691,7 @@ export function RenewalManagement() {
                       renewalApplications.map((app) => (
                         <TableRow key={app.renewalId}>
                           <TableCell>
-                            {app.status === "PENDING" && (
+                            {app.status === "PENDING" && permissions.hasPermission("APPROVE_RENEWALS") && (
                               <Checkbox
                                 checked={selectedApplications.includes(app.renewalId)}
                                 onCheckedChange={(checked) => {
@@ -716,7 +718,7 @@ export function RenewalManagement() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              {app.status === "PENDING" && (
+                              {app.status === "PENDING" && permissions.hasPermission("APPROVE_RENEWALS") && (
                                 <>
                                   <Button
                                     variant="outline"
@@ -781,7 +783,7 @@ export function RenewalManagement() {
                 </div>
               )}
             </TabsContent>
-          )}
+  
           </Tabs>
         </CardContent>
       </Card>
