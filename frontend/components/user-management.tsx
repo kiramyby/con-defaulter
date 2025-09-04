@@ -33,7 +33,8 @@ import { Plus, Search, RefreshCw, Edit, Trash2, Key, UserCheck, UserX } from "lu
 import { apiService } from "@/lib/api-service"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
-import { usePermissions, RequirePermission } from "@/components/permissions-guard"
+import { RequirePermission } from "@/components/permissions-guard"
+import { usePermissions } from "@/lib/permissions"
 import { useErrorHandler } from "@/lib/error-handler"
 import type { 
   User, 
@@ -159,7 +160,7 @@ export function UserManagement() {
     
     setLoading(true)
     try {
-      await apiService.updateUser(editingUser.dbId, editFormData)
+      await apiService.updateUser(editingUser.id, editFormData)
       toast({
         title: "更新成功",
         description: "用户信息已更新",
@@ -196,7 +197,7 @@ export function UserManagement() {
     
     setLoading(true)
     try {
-      await apiService.resetUserPassword(editingUser.dbId, newPassword)
+      await apiService.resetUserPassword(editingUser.id, newPassword)
       toast({
         title: "重置成功",
         description: "密码已重置",
@@ -298,7 +299,7 @@ export function UserManagement() {
                       <SelectValue placeholder="选择角色" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">全部角色</SelectItem>
+                      <SelectItem value={null}>全部角色</SelectItem>
                       <SelectItem value="ADMIN">管理员</SelectItem>
                       <SelectItem value="OPERATOR">操作员</SelectItem>
                       <SelectItem value="AUDITOR">审核员</SelectItem>
@@ -314,7 +315,7 @@ export function UserManagement() {
                       <SelectValue placeholder="选择状态" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">全部状态</SelectItem>
+                      <SelectItem value={null}>全部状态</SelectItem>
                       <SelectItem value="ACTIVE">启用</SelectItem>
                       <SelectItem value="INACTIVE">禁用</SelectItem>
                     </SelectContent>
@@ -408,7 +409,7 @@ export function UserManagement() {
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>取消</AlertDialogCancel>
                                       <AlertDialogAction 
-                                        onClick={() => handleDeleteUser(user.dbId)}
+                                        onClick={() => handleDeleteUser(user.id)}
                                         className="bg-destructive hover:bg-destructive/90"
                                       >
                                         删除

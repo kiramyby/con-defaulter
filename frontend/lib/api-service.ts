@@ -353,24 +353,24 @@ class ApiService {
     })
   }
 
-  async getUser(userId: number): Promise<User> {
+  async getUser(userId: number | string): Promise<User> {
     return this.request(`/users/${userId}`)
   }
 
-  async updateUser(userId: number, data: UpdateUserData): Promise<User> {
+  async updateUser(userId: number | string, data: UpdateUserData): Promise<User> {
     return this.request(`/users/${userId}`, {
       method: "PUT", 
       body: JSON.stringify(data),
     })
   }
 
-  async deleteUser(userId: number): Promise<void> {
+  async deleteUser(userId: number | string): Promise<void> {
     return this.request(`/users/${userId}`, {
       method: "DELETE",
     })
   }
 
-  async resetUserPassword(userId: number, newPassword: string): Promise<void> {
+  async resetUserPassword(userId: number | string, newPassword: string): Promise<void> {
     return this.request(`/users/${userId}/reset-password`, {
       method: "POST",
       body: JSON.stringify({ password: newPassword }),
