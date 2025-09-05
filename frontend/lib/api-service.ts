@@ -21,7 +21,7 @@ import type {
 } from './api-types'
 
 class ApiService {
-  private baseURL = "http://localhost:3001/api/v1"
+  private baseURL = "https://server.kiracoon.top/api/v1"
 
   private getAuthHeaders() {
     const token = localStorage.getItem("auth_token")
