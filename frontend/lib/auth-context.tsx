@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
 
-  const API_BASE_URL = "http://localhost:3001/api/v1"
+  const API_BASE_URL = "https://server.kiracoon.top/api/v1"
 
   // Initialize auth state from localStorage
   useEffect(() => {
