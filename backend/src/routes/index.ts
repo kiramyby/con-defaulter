@@ -1399,6 +1399,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *     tags: [违约原因管理]
    *     summary: 查询违约原因列表
    *     description: 获取违约原因的分页列表，支持条件查询
+   *     security:
+   *       - BearerAuth: []
    *     parameters:
    *       - in: query
    *         name: page
@@ -1466,6 +1468,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *     tags: [违约原因管理]
    *     summary: 查询启用的违约原因列表
    *     description: 获取所有启用状态的违约原因，用于申请时选择
+   *     security:
+   *       - BearerAuth: []
    *     responses:
    *       200:
    *         description: 查询成功
@@ -1506,6 +1510,8 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *     tags: [违约原因管理]
    *     summary: 获取违约原因详情
    *     description: 根据ID获取违约原因的详细信息
+   *     security:
+   *       - BearerAuth: []
    *     parameters:
    *       - in: path
    *         name: id
@@ -1858,6 +1864,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
   router.post('/default-reasons/batch-status',
     authenticateToken,
     requirePermission('UPDATE_DEFAULT_REASON'),
+    validate(defaultReasonValidation.batchStatus),
     defaultReasonController.batchUpdateStatus,
   );
 

@@ -37,6 +37,11 @@ export const defaultReasonValidation = {
     reasonName: z.string().optional(),
     enabled: z.preprocess((val) => val === 'true' ? true : val === 'false' ? false : undefined, z.boolean().optional()),
   }),
+
+  batchStatus: z.object({
+    ids: z.array(z.number().int().positive()).min(1, '至少选择一个违约原因'),
+    enabled: z.boolean(),
+  }),
 };
 
 // 违约申请验证
