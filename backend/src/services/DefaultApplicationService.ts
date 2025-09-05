@@ -104,7 +104,10 @@ export class DefaultApplicationService {
    * 查询违约认定申请列表
    */
   async getApplications(params: ApplicationQueryParams & { dataAccess?: any }): Promise<PaginatedResponse<DefaultApplicationDto>> {
-    const { page = 1, size = 10, status, customerName, applicant, severity, startTime, endTime, dataAccess } = params;
+    // 确保分页参数为数字类型（URL查询参数默认为字符串）
+    const page = Number(params.page) || 1;
+    const size = Number(params.size) || 10;
+    const { status, customerName, applicant, severity, startTime, endTime, dataAccess } = params;
     const skip = (page - 1) * size;
 
     const where: any = {};

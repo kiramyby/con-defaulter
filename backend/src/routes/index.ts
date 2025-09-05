@@ -185,9 +185,23 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *   post:
    *     tags: [认证管理]
    *     summary: 用户登出
-   *     description: 用户登出，使令牌失效
+   *     description: |
+   *       用户登出，撤销refresh token。使用Refresh Token轮转机制，需要在请求体中提供refresh_token。
+   *       登出后该refresh token将立即失效，access token会在过期时间后自动失效。
    *     security:
    *       - BearerAuth: []
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               refresh_token:
+   *                 type: string
+   *                 description: 用于撤销的refresh token（可选，但建议提供以确保安全）
+   *             example:
+   *               refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
    *     responses:
    *       200:
    *         description: 登出成功
@@ -204,13 +218,26 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                   example: "登出成功"
    *                 data:
    *                   type: object
-   *                   nullable: true
-   *                   example: null
+   *                   properties:
+   *                     message:
+   *                       type: string
+   *                       example: "登出成功"
+   *                     timestamp:
+   *                       type: string
+   *                       format: date-time
+   *                     instruction:
+   *                       type: string
+   *                       example: "认证令牌已失效，请重新登录"
    *                 timestamp:
    *                   type: string
    *                   format: date-time
+   *       401:
+   *         description: 认证失败，未提供有效token
+   *       500:
+   *         description: 服务器内部错误
    */
   router.post('/auth/logout',
+    authenticateToken,
     authController.logout,
   );
 
@@ -219,8 +246,20 @@ const initializeRoutes = (prisma: PrismaClient) => {
    * /auth/refresh:
    *   post:
    *     tags: [认证管理]
-   *     summary: 刷新访问令牌
-   *     description: 使用刷新令牌获取新的访问令牌
+   *     summary: 刷新访问令牌（Token轮转机制）
+   *     description: |
+   *       使用Refresh Token轮转机制刷新访问令牌。
+   *       
+   *       **重要特性：**
+   *       - 每次刷新都会生成新的access_token和refresh_token
+   *       - 旧的refresh_token会立即失效，防止重放攻击
+   *       - 如果检测到已撤销的token被重用，会撤销该用户的所有token
+   *       - 支持设备识别和异常检测
+   *       
+   *       **安全机制：**
+   *       - 前向安全：即使refresh_token泄露，也只能使用一次
+   *       - 自动检测攻击：重复使用会触发安全响应
+   *       - 设备追踪：记录每次刷新的设备信息
    *     requestBody:
    *       required: true
    *       content:
@@ -232,10 +271,11 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *             properties:
    *               refresh_token:
    *                 type: string
-   *                 description: 刷新令牌
+   *                 description: 当前有效的刷新令牌
+   *                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
    *     responses:
    *       200:
-   *         description: 刷新成功
+   *         description: 刷新成功，返回新的token对
    *         content:
    *           application/json:
    *             schema:
@@ -246,31 +286,200 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                   example: 200
    *                 message:
    *                   type: string
-   *                   example: "刷新成功"
+   *                   example: "令牌刷新成功"
    *                 data:
    *                   type: object
    *                   properties:
    *                     access_token:
    *                       type: string
+   *                       description: 新的访问令牌（30分钟有效期）
+   *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
    *                     refresh_token:
    *                       type: string
+   *                       description: 新的刷新令牌（30天有效期）
+   *                       example: "dGhpcyBpcyBhIG5ldyByZWZyZXNoIHRva2Vu..."
    *                     expires_in:
    *                       type: number
+   *                       description: 访问令牌过期时间（秒）
+   *                       example: 1800
    *                     token_type:
    *                       type: string
+   *                       example: "Bearer"
    *                 timestamp:
    *                   type: string
    *                   format: date-time
+   *       400:
+   *         description: 缺少refresh_token参数
    *       401:
-   *         description: 刷新令牌无效或已过期
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
+   *         description: 刷新令牌无效、已过期或已被撤销
+   *       403:
+   *         description: 检测到可疑活动，已撤销所有用户token
+   *       500:
+   *         description: 服务器内部错误
    */
   router.post('/auth/refresh',
     validate(authValidation.refreshToken),
     authController.refreshToken,
+  );
+
+  /**
+   * @swagger
+   * /auth/sessions:
+   *   get:
+   *     tags: [会话管理]
+   *     summary: 获取用户的活跃会话列表
+   *     description: |
+   *       获取当前用户的所有活跃会话信息，包括设备信息、登录时间等。
+   *       用户可以查看自己在不同设备上的登录状态。
+   *     security:
+   *       - BearerAuth: []
+   *     responses:
+   *       200:
+   *         description: 获取成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: integer
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "获取会话列表成功"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     sessions:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                             description: 会话ID
+   *                           deviceId:
+   *                             type: string
+   *                             description: 设备标识
+   *                             nullable: true
+   *                           userAgent:
+   *                             type: string
+   *                             description: 用户代理信息
+   *                             nullable: true
+   *                           ipAddress:
+   *                             type: string
+   *                             description: IP地址
+   *                             nullable: true
+   *                           createdAt:
+   *                             type: string
+   *                             format: date-time
+   *                             description: 会话创建时间
+   *                           lastUsedAt:
+   *                             type: string
+   *                             format: date-time
+   *                             description: 最后使用时间
+   *                           isCurrent:
+   *                             type: boolean
+   *                             description: 是否为当前会话
+   *                     total:
+   *                       type: integer
+   *                       description: 活跃会话总数
+   *       401:
+   *         description: 认证失败
+   *       500:
+   *         description: 服务器内部错误
+   *   delete:
+   *     tags: [会话管理]
+   *     summary: 撤销所有其他会话
+   *     description: |
+   *       撤销当前用户的所有其他会话（除当前会话外）。
+   *       这是一个安全操作，通常在用户怀疑账号被盗用时使用。
+   *     security:
+   *       - BearerAuth: []
+   *     responses:
+   *       200:
+   *         description: 撤销成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: integer
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "所有其他会话已撤销"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     revokedCount:
+   *                       type: integer
+   *                       description: 被撤销的会话数量
+   *       401:
+   *         description: 认证失败
+   *       500:
+   *         description: 服务器内部错误
+   */
+  router.get('/auth/sessions',
+    authenticateToken,
+    authController.getUserSessions,
+  );
+
+  router.delete('/auth/sessions',
+    authenticateToken,
+    authController.revokeAllOtherSessions,
+  );
+
+  /**
+   * @swagger
+   * /auth/sessions/{sessionId}:
+   *   delete:
+   *     tags: [会话管理]
+   *     summary: 撤销指定会话（远程登出）
+   *     description: |
+   *       撤销指定的会话，实现远程登出功能。
+   *       用户可以登出其他设备上的会话，提高账号安全性。
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: sessionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: 要撤销的会话ID
+   *         example: "550e8400-e29b-41d4-a716-446655440000"
+   *     responses:
+   *       200:
+   *         description: 撤销成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: integer
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "会话撤销成功"
+   *                 data:
+   *                   type: object
+   *                   nullable: true
+   *                   example: null
+   *       400:
+   *         description: 会话ID无效
+   *       401:
+   *         description: 认证失败
+   *       404:
+   *         description: 会话不存在或已过期
+   *       500:
+   *         description: 服务器内部错误
+   */
+  router.delete('/auth/sessions/:sessionId',
+    authenticateToken,
+    authController.revokeUserSession,
   );
 
   /**
@@ -576,6 +785,76 @@ const initializeRoutes = (prisma: PrismaClient) => {
     authController.register,
   );
 
+  /**
+   * @swagger
+   * /auth/self-register:
+   *   post:
+   *     tags: [认证管理]
+   *     summary: 用户自助注册
+   *     description: 新用户自行创建账号，无需管理员权限，默认角色为USER
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - username
+   *               - realName
+   *               - email
+   *               - password
+   *             properties:
+   *               username:
+   *                 type: string
+   *                 description: 用户名（字母数字下划线）
+   *               realName:
+   *                 type: string
+   *                 description: 真实姓名
+   *               email:
+   *                 type: string
+   *                 format: email
+   *                 description: 邮箱地址
+   *               phone:
+   *                 type: string
+   *                 description: 手机号码
+   *               department:
+   *                 type: string
+   *                 description: 部门
+   *               password:
+   *                 type: string
+   *                 minLength: 6
+   *                 description: 密码（必须包含大小写字母和数字）
+   *     responses:
+   *       201:
+   *         description: 注册成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: number
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "注册成功，请等待管理员审核"
+   *                 data:
+   *                   $ref: '#/components/schemas/User'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: 注册失败
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.post('/auth/self-register',
+    validate(authValidation.selfRegister),
+    authController.selfRegister,
+  );
+
   // ==================== 用户管理路由 ====================
   
   /**
@@ -826,7 +1105,7 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *   put:
    *     tags: [用户管理]
    *     summary: 更新用户信息
-   *     description: 管理员更新指定用户的基本信息。仅限ADMIN权限。
+   *     description: 管理员更新指定用户的所有信息，包括用户名、邮箱、角色、状态等。仅限ADMIN权限。
    *     security:
    *       - BearerAuth: []
    *     parameters:
@@ -843,6 +1122,15 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *           schema:
    *             type: object
    *             properties:
+   *               username:
+   *                 type: string
+   *                 minLength: 2
+   *                 maxLength: 50
+   *                 description: 用户名（字母、数字和下划线）
+   *               email:
+   *                 type: string
+   *                 format: email
+   *                 description: 邮箱地址
    *               realName:
    *                 type: string
    *                 minLength: 2
@@ -852,6 +1140,14 @@ const initializeRoutes = (prisma: PrismaClient) => {
    *                 type: string
    *                 maxLength: 20
    *                 description: 手机号码
+   *               role:
+   *                 type: string
+   *                 enum: [ADMIN, AUDITOR, OPERATOR, USER]
+   *                 description: 用户角色
+   *               status:
+   *                 type: string
+   *                 enum: [ACTIVE, INACTIVE]
+   *                 description: 用户状态
    *               department:
    *                 type: string
    *                 maxLength: 100
@@ -1007,6 +1303,91 @@ const initializeRoutes = (prisma: PrismaClient) => {
     requirePermission('UPDATE_USER'),
     validate(userManagementValidation.resetPassword),
     authController.resetPassword,
+  );
+
+  /**
+   * @swagger
+   * /users/{userId}:
+   *   delete:
+   *     tags: [用户管理]
+   *     summary: 删除用户（软删除）
+   *     description: |
+   *       删除指定用户，使用软删除方式（将状态设为INACTIVE而不是物理删除）。
+   *       
+   *       **权限要求：** 仅限ADMIN权限
+   *       
+   *       **安全限制：**
+   *       - 不能删除自己的账号
+   *       - 不能删除其他管理员账号
+   *       - 删除后用户无法登录，但数据得以保留
+   *       
+   *       **操作记录：**
+   *       - 会记录详细的操作日志
+   *       - 包含操作人、被删除用户、时间等信息
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: 要删除的用户ID
+   *         example: 123
+   *     responses:
+   *       200:
+   *         description: 删除成功
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: integer
+   *                   example: 200
+   *                 message:
+   *                   type: string
+   *                   example: "用户删除成功"
+   *                 data:
+   *                   type: object
+   *                   nullable: true
+   *                   example: null
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: 请求参数错误
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 code:
+   *                   type: integer
+   *                   example: 400
+   *                 message:
+   *                   type: string
+   *                   examples:
+   *                     invalid_id: "用户ID无效"
+   *                     self_delete: "不能删除自己的账号"
+   *                     admin_delete: "不能删除管理员账号"
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       401:
+   *         description: 认证失败，未登录或token无效
+   *       403:
+   *         description: 权限不足，需要ADMIN权限
+   *       404:
+   *         description: 指定的用户不存在
+   *       500:
+   *         description: 服务器内部错误
+   */
+  router.delete('/users/:userId',
+    authenticateToken,
+    requirePermission('DELETE_USER'),
+    authController.deleteUser,
   );
 
   // ==================== 违约原因管理路由 ====================

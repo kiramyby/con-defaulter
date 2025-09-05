@@ -13,7 +13,10 @@ export class DefaultCustomerService {
    * 查询违约客户列表
    */
   async getDefaultCustomers(params: DefaultCustomerQueryParams & { dataAccess?: any }): Promise<PaginatedResponse<DefaultCustomerDto>> {
-    const { page = 1, size = 10, customerName, severity, startTime, endTime, dataAccess } = params;
+    // 确保分页参数为数字类型（URL查询参数默认为字符串）
+    const page = Number(params.page) || 1;
+    const size = Number(params.size) || 10;
+    const { customerName, severity, startTime, endTime, dataAccess } = params;
     const skip = (page - 1) * size;
 
     const where: any = {

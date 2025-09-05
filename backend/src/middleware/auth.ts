@@ -2,8 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
 import logger from '../config/logger';
+import { PrismaClient } from '@prisma/client';
 
-// JWT认证中间件（简化版）
+const prisma = new PrismaClient();
+
+// JWT认证中间件（增强版，包含用户状态验证）
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -20,15 +23,39 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     // 验证JWT token并获取用户信息
     const decoded = jwt.verify(token, config.JWT_SECRET) as any;
     
-    // 直接使用JWT中的用户信息，无需每次查询数据库
+    // 验证用户状态（防止JWT未过期但用户已被禁用的情况）
+    const currentUser = await prisma.user.findUnique({
+      where: { id: BigInt(decoded.dbId) },
+      select: { status: true, role: true }
+    });
+
+    if (!currentUser) {
+      logger.warn(`用户不存在但JWT仍有效: ${decoded.username}`);
+      return res.status(403).json({
+        code: 403,
+        message: '用户账号不存在',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (currentUser.status !== 'ACTIVE') {
+      logger.warn(`用户已被禁用但JWT仍有效: ${decoded.username}`);
+      return res.status(403).json({
+        code: 403,
+        message: '用户账号已被禁用，请联系管理员',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 设置用户信息，使用数据库中的最新状态
     req.user = {
-      id: decoded.id,
+      id: decoded.id, // JWT中的id字段（字符串格式的数据库ID）
       email: decoded.email,
-      dbId: decoded.dbId,
+      dbId: decoded.dbId, // JWT中的dbId字段（数字格式的数据库ID）
       username: decoded.username,
       realName: decoded.realName,
-      role: decoded.role,
-      status: decoded.status,
+      role: currentUser.role, // 使用最新的角色信息
+      status: currentUser.status, // 使用最新的状态信息
       department: decoded.department
     };
 

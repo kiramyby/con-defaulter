@@ -185,6 +185,9 @@ model User {
   updateTime     DateTime   @default(now()) @updatedAt @map("update_time") @db.Timestamptz
   createdBy      String?    @map("created_by") @db.VarChar(50) // 创建人
 
+  // Relations
+  refreshTokens RefreshToken[]
+
   @@map("users")
 }
 
@@ -204,6 +207,27 @@ model OperationLog {
 
   @@map("operation_logs")
 }
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     BigInt   @map("user_id")
+  tokenHash  String   @unique @map("token_hash") @db.VarChar(64) // SHA256 hash
+  userAgent  String?  @map("user_agent") @db.VarChar(500)
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lastUsedAt DateTime @default(now()) @map("last_used_at") @db.Timestamptz
+  isRevoked  Boolean  @default(false) @map("is_revoked")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRevoked])
+  @@index([expiresAt])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
 
 // Enums
 enum CustomerStatus {
@@ -246,3 +270,4 @@ enum UserStatus {
   ACTIVE
   INACTIVE
 }
+

@@ -32,10 +32,10 @@ export const defaultReasonValidation = {
   }),
 
   query: z.object({
-    page: z.number().int().min(1).default(1),
-    size: z.number().int().min(1).max(100).default(10),
+    page: z.preprocess((val) => val ? Number(val) : 1, z.number().int().min(1)).default(1),
+    size: z.preprocess((val) => val ? Number(val) : 10, z.number().int().min(1).max(100)).default(10),
     reasonName: z.string().optional(),
-    enabled: z.boolean().optional(),
+    enabled: z.preprocess((val) => val === 'true' ? true : val === 'false' ? false : undefined, z.boolean().optional()),
   }),
 };
 
@@ -68,8 +68,8 @@ export const defaultApplicationValidation = {
   }),
 
   query: z.object({
-    page: z.number().int().min(1).default(1),
-    size: z.number().int().min(1).max(100).default(10),
+    page: z.preprocess((val) => val ? Number(val) : 1, z.number().int().min(1)).default(1),
+    size: z.preprocess((val) => val ? Number(val) : 10, z.number().int().min(1).max(100)).default(10),
     status: commonValidation.applicationStatus.optional(),
     customerName: z.string().optional(),
     applicant: z.string().optional(),
@@ -101,8 +101,8 @@ export const renewalValidation = {
   }),
 
   query: z.object({
-    page: z.number().int().min(1).default(1),
-    size: z.number().int().min(1).max(100).default(10),
+    page: z.preprocess((val) => val ? Number(val) : 1, z.number().int().min(1)).default(1),
+    size: z.preprocess((val) => val ? Number(val) : 10, z.number().int().min(1).max(100)).default(10),
     status: commonValidation.renewalStatus.optional(),
     customerName: z.string().max(255).optional(),
     applicant: z.string().max(255).optional(),
@@ -159,9 +159,24 @@ export const authValidation = {
     email: z.string().email('邮箱格式不正确'),
     phone: z.string().optional(),
     department: z.string().optional(),
-    role: z.enum(['ADMIN', 'OPERATOR', 'AUDITOR'], {
-      errorMap: () => ({ message: '角色必须是ADMIN、OPERATOR或AUDITOR之一' })
+    role: z.enum(['ADMIN', 'AUDITOR', 'OPERATOR', 'USER'], {
+      errorMap: () => ({ message: '角色必须是ADMIN、AUDITOR、OPERATOR或USER之一' })
     }),
+    password: z.string().min(6, '密码至少6位')
+      .refine(val => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/.test(val), {
+        message: '密码必须包含大小写字母和数字，至少6位',
+      }),
+  }),
+
+  selfRegister: z.object({
+    username: z.string().min(2, '用户名至少2位').max(50, '用户名不能超过50位')
+      .refine(val => /^[a-zA-Z0-9_]+$/.test(val), {
+        message: '用户名只能包含字母、数字和下划线',
+      }),
+    realName: z.string().min(2, '真实姓名至少2位').max(100, '真实姓名不能超过100位'),
+    email: z.string().email('邮箱格式不正确'),
+    phone: z.string().optional(),
+    department: z.string().optional(),
     password: z.string().min(6, '密码至少6位')
       .refine(val => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/.test(val), {
         message: '密码必须包含大小写字母和数字，至少6位',
@@ -172,8 +187,8 @@ export const authValidation = {
 // 用户管理验证
 export const userManagementValidation = {
   getAllUsers: z.object({
-    page: z.number().int().min(1).default(1),
-    size: z.number().int().min(1).max(100).default(10),
+    page: z.preprocess((val) => val ? Number(val) : 1, z.number().int().min(1)).default(1),
+    size: z.preprocess((val) => val ? Number(val) : 10, z.number().int().min(1).max(100)).default(10),
     role: z.enum(['ADMIN', 'OPERATOR', 'AUDITOR']).optional(),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
     keyword: z.string().max(255).optional(),
@@ -192,8 +207,19 @@ export const userManagementValidation = {
   }),
 
   updateUser: z.object({
+    username: z.string().min(2, '用户名至少2位').max(50, '用户名不能超过50位')
+      .refine(val => /^[a-zA-Z0-9_]+$/.test(val), {
+        message: '用户名只能包含字母、数字和下划线',
+      }).optional(),
+    email: z.string().email('邮箱格式不正确').optional(),
     realName: z.string().min(2, '真实姓名至少2位').max(100, '真实姓名不能超过100位').optional(),
     phone: z.string().max(20, '手机号码不能超过20位').optional(),
+    role: z.enum(['ADMIN', 'AUDITOR', 'OPERATOR', 'USER'], {
+      errorMap: () => ({ message: '角色必须是ADMIN、AUDITOR、OPERATOR或USER之一' })
+    }).optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE'], {
+      errorMap: () => ({ message: '用户状态必须是ACTIVE或INACTIVE' })
+    }).optional(),
     department: z.string().max(100, '部门不能超过100位').optional(),
   }),
 
