@@ -1,0 +1,120 @@
+{
+  "test_plan": [
+    {
+      "id": "auth_login_test",
+      "name": "User Authentication - Login",
+      "description": "Test user login functionality with valid and invalid credentials",
+      "priority": "high",
+      "category": "authentication",
+      "steps": [
+        "Navigate to login page",
+        "Enter valid credentials",
+        "Verify successful login and redirect to dashboard",
+        "Test invalid credentials",
+        "Verify error messages"
+      ]
+    },
+    {
+      "id": "auth_register_test",
+      "name": "User Authentication - Registration",
+      "description": "Test user registration functionality",
+      "priority": "high",
+      "category": "authentication",
+      "steps": [
+        "Navigate to registration page",
+        "Fill in registration form",
+        "Submit registration",
+        "Verify account creation"
+      ]
+    },
+    {
+      "id": "dashboard_navigation_test",
+      "name": "Dashboard Navigation",
+      "description": "Test dashboard navigation and component loading",
+      "priority": "high",
+      "category": "navigation",
+      "steps": [
+        "Login and access dashboard",
+        "Navigate through different tabs",
+        "Verify all components load correctly",
+        "Test responsive design"
+      ]
+    },
+    {
+      "id": "default_customers_test",
+      "name": "Default Customers Management",
+      "description": "Test default customers CRUD operations",
+      "priority": "high",
+      "category": "functionality",
+      "steps": [
+        "Access default customers section",
+        "View customer list",
+        "Create new default customer",
+        "Edit existing customer",
+        "Search and filter customers",
+        "Test export functionality"
+      ]
+    },
+    {
+      "id": "default_applications_test",
+      "name": "Default Applications Management",
+      "description": "Test default applications workflow",
+      "priority": "high",
+      "category": "functionality",
+      "steps": [
+        "Access default applications section",
+        "Create new application",
+        "Upload attachments",
+        "Test approval workflow",
+        "Verify status updates"
+      ]
+    },
+    {
+      "id": "statistics_test",
+      "name": "Statistics and Analytics",
+      "description": "Test statistics dashboard and data visualization",
+      "priority": "medium",
+      "category": "analytics",
+      "steps": [
+        "Access statistics section",
+        "Verify data charts load",
+        "Test date range filters",
+        "Verify export functionality",
+        "Test industry and region statistics"
+      ]
+    },
+    {
+      "id": "user_management_test",
+      "name": "User Management",
+      "description": "Test user management features for administrators",
+      "priority": "medium",
+      "category": "administration",
+      "steps": [
+        "Access user management (admin only)",
+        "Create new user",
+        "Assign roles and permissions",
+        "Edit user details",
+        "Test permission restrictions"
+      ]
+    },
+    {
+      "id": "renewal_management_test",
+      "name": "Renewal Management",
+      "description": "Test renewal applications and processes",
+      "priority": "medium",
+      "category": "functionality",
+      "steps": [
+        "Access renewal management",
+        "Create renewal application",
+        "Test approval process",
+        "Verify renewal tracking"
+      ]
+    }
+  ],
+  "test_config": {
+    "base_url": "http://localhost:3000",
+    "timeout": 30000,
+    "screenshot_on_failure": true,
+    "headless": false
+  }
+}

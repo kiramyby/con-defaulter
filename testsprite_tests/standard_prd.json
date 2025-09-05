@@ -1,0 +1,202 @@
+{
+  "meta": {
+    "project": "违约客户管理系统",
+    "date": "2025-09-05",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "违约客户管理系统是一款基于现代技术栈(Node.js, TypeScript, React, Next.js, Prisma, PostgreSQL)构建的企业级应用。系统支持用户身份认证与权限管理，涵盖违约客户的管理、违约原因配置、申请审批、数据统计分析及导出，为金融机构的违约风险管理提供全面的信息化解决方案。",
+  "core_goals": [
+    "提供安全稳定的用户身份验证与权限控制，保障系统访问安全。",
+    "支持违约客户及违约原因的管理，包含创建、查询、更新与删除操作。",
+    "实现违约认定申请与续期申请的提交、审核和跟踪流程，满足不同角色对数据访问的需求。",
+    "提供多维度的统计分析和报表导出功能，辅助业务决策。",
+    "确保系统接口规范，支持性能优化和访问控制，以提升用户体验。"
+  ],
+  "key_features": [
+    "完善的认证系统，支持JWT认证、登录、注册、登出、Token刷新及会话管理。",
+    "基于角色的访问控制（RBAC），包括ADMIN、AUDITOR、OPERATOR和USER多种角色权限划分。",
+    "违约原因管理模块，支持原因的增删改查、批量状态更新及启用状态过滤。",
+    "违约认定申请管理，包括申请提交、列表查询、详情查看及审批功能，支持批量审核。",
+    "违约客户管理，提供分页查询、导出功能及客户详情查看，权限区分查看范围。",
+    "违约续期（重生）管理，包含续期原因管理、申请提交与审批。",
+    "统计分析模块，支持按行业、区域、趋势维度的统计查询与报表导出，包含多种导出格式。",
+    "完善的错误处理体系，统一响应格式与标准错误码。",
+    "安全机制包括速率限制、数据验证、文件上传限制及HTTP安全头配置。",
+    "丰富的API文档支持（Swagger），便于前后端及第三方集成。"
+  ],
+  "user_flow_summary": [
+    "用户通过邮箱和密码登录系统，获得访问Token进行身份认证。",
+    "管理员或用户可通过界面进行违约原因的管理操作，包括新建、修改、删除以及批量启用禁用。",
+    "操作员或管理员提交违约认定申请，申请会进入审核环节，由审核员或管理员进行审批。",
+    "管理员或操作员查看违约客户列表，支持导出客户数据，查看客户详细信息。",
+    "用户根据权限提交违约续期申请，审核人员对申请进行审批，并查看申请状态。",
+    "用户或管理员访问统计模块，选择统计维度和时间范围，查看并导出对应的统计报表。",
+    "管理员可通过用户管理模块维护系统用户，控制权限，管理用户状态及密码。"
+  ],
+  "validation_criteria": [
+    "所有用户操作需基于JWT认证，未认证用户禁止访问受保护接口。",
+    "权限控制严格执行RBAC规则，不同角色访问不同的数据和功能。",
+    "接口响应遵循统一格式，正确返回HTTP状态码与业务码，保证接口稳定性。",
+    "系统支持分页查询及搜索，确保数据加载效率和用户体验。",
+    "文件上传支持多种格式且单文件大小限制为10MB，保证上传安全。",
+    "所有输入数据均通过Zod等验证库进行严格校验，防止非法数据注入。",
+    "违约申请和续期申请流程包含审批节点，审批结果与反馈必须准确保存和反馈。",
+    "统计数据准确无误，支持多维度查询，且导出文件格式正确，能够被常见办公软件识别。",
+    "API使用Swagger文档说明，保证接口接口文档与实现一致。",
+    "系统支持每日多达100次请求的访问频率，具备基本的访问速率限制。"
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "Next.js",
+      "React",
+      "Express.js",
+      "Prisma",
+      "PostgreSQL",
+      "Tailwind CSS",
+      "Radix UI",
+      "JWT Authentication",
+      "Winston Logger",
+      "Zod Validation",
+      "Swagger/OpenAPI"
+    ],
+    "features": [
+      {
+        "name": "Authentication System",
+        "description": "Complete user authentication with login, registration, JWT tokens, and role-based access control",
+        "files": [
+          "backend/src/controllers/AuthController.ts",
+          "backend/src/middleware/auth.ts",
+          "frontend/lib/auth-context.tsx",
+          "frontend/app/login/page.tsx",
+          "frontend/app/register/page.tsx"
+        ]
+      },
+      {
+        "name": "Default Customer Management",
+        "description": "Manage default customers including CRUD operations, search, filtering, and export functionality",
+        "files": [
+          "backend/src/controllers/DefaultCustomerController.ts",
+          "backend/src/services/DefaultCustomerService.ts",
+          "frontend/components/default-customers-management.tsx"
+        ]
+      },
+      {
+        "name": "Default Application Management",
+        "description": "Handle default applications with approval workflows, document attachments, and batch operations",
+        "files": [
+          "backend/src/controllers/DefaultApplicationController.ts",
+          "backend/src/services/DefaultApplicationService.ts",
+          "frontend/components/default-applications-management.tsx"
+        ]
+      },
+      {
+        "name": "Default Reasons Management",
+        "description": "Manage default reasons with categorization, priority levels, and CRUD operations",
+        "files": [
+          "backend/src/controllers/DefaultReasonController.ts",
+          "backend/src/services/DefaultReasonService.ts",
+          "frontend/components/default-reasons-management.tsx"
+        ]
+      },
+      {
+        "name": "Renewal Management",
+        "description": "Handle renewal applications and reasons with approval processes and tracking",
+        "files": [
+          "backend/src/controllers/RenewalController.ts",
+          "backend/src/services/RenewalService.ts",
+          "frontend/components/renewal-management.tsx"
+        ]
+      },
+      {
+        "name": "Statistics and Analytics",
+        "description": "Generate comprehensive statistics including industry analysis, regional data, and trend reports",
+        "files": [
+          "backend/src/controllers/StatisticsController.ts",
+          "backend/src/services/StatisticsService.ts",
+          "frontend/components/statistics-analysis.tsx"
+        ]
+      },
+      {
+        "name": "User Management",
+        "description": "Administrative user management with role assignment and permission control",
+        "files": [
+          "frontend/components/user-management.tsx",
+          "backend/src/config/permissions.ts"
+        ]
+      },
+      {
+        "name": "Security System",
+        "description": "Security notifications, event logging, and access control mechanisms",
+        "files": [
+          "backend/src/services/SecurityNotificationService.ts",
+          "frontend/components/secure-content.tsx",
+          "frontend/components/permissions-guard.tsx"
+        ]
+      },
+      {
+        "name": "Dashboard Interface",
+        "description": "Main dashboard with navigation, statistics overview, and component integration",
+        "files": [
+          "frontend/app/dashboard/page.tsx",
+          "frontend/app/dashboard/layout.tsx"
+        ]
+      },
+      {
+        "name": "API Service Layer",
+        "description": "Frontend API service for HTTP requests, error handling, and data transformation",
+        "files": [
+          "frontend/lib/api-service.ts",
+          "frontend/lib/api-types.ts",
+          "frontend/lib/mock-api.ts"
+        ]
+      },
+      {
+        "name": "UI Components",
+        "description": "Reusable UI components built with Radix UI and Tailwind CSS",
+        "files": [
+          "frontend/components/ui/button.tsx",
+          "frontend/components/ui/card.tsx",
+          "frontend/components/ui/dialog.tsx",
+          "frontend/components/ui/form.tsx",
+          "frontend/components/ui/input.tsx",
+          "frontend/components/ui/table.tsx",
+          "frontend/components/ui/tabs.tsx"
+        ]
+      },
+      {
+        "name": "Error Handling",
+        "description": "Comprehensive error handling system with user notifications and logging",
+        "files": [
+          "frontend/lib/error-handler.ts",
+          "frontend/components/error-provider.tsx",
+          "backend/src/middleware/errorHandler.ts"
+        ]
+      },
+      {
+        "name": "Database Configuration",
+        "description": "Database setup, connection management, and Prisma ORM configuration",
+        "files": [
+          "backend/src/config/database.ts",
+          "backend/src/config/env.ts"
+        ]
+      },
+      {
+        "name": "API Documentation",
+        "description": "Swagger/OpenAPI documentation setup and configuration",
+        "files": [
+          "backend/src/config/swagger.ts",
+          "backend/src/types/api.ts"
+        ]
+      },
+      {
+        "name": "Protected Routes",
+        "description": "Route protection mechanisms with authentication and authorization checks",
+        "files": [
+          "frontend/components/protected-route.tsx",
+          "frontend/lib/permissions.ts"
+        ]
+      }
+    ]
+  }
+}

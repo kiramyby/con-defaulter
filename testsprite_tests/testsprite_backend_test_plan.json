@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "jwt_authentication_and_token_refresh",
+    "description": "Verify that the authentication system correctly handles user login, registration, JWT token issuance, token refresh, and logout functionalities, ensuring secure access control."
+  },
+  {
+    "id": "TC002",
+    "title": "role_based_access_control_enforcement",
+    "description": "Test that the system enforces role-based access control (RBAC) rules correctly, restricting or allowing access to APIs based on user roles such as ADMIN, AUDITOR, OPERATOR, and USER."
+  },
+  {
+    "id": "TC003",
+    "title": "default_customer_crud_and_export",
+    "description": "Validate the create, read, update, delete (CRUD) operations for default customers, including pagination, search, filtering, and data export functionalities with proper permission checks."
+  },
+  {
+    "id": "TC004",
+    "title": "default_application_submission_and_approval",
+    "description": "Ensure that default application submission, listing, detail viewing, and approval workflows function correctly, including batch approval operations and document attachment handling."
+  },
+  {
+    "id": "TC005",
+    "title": "default_reason_management_crud_and_batch_update",
+    "description": "Test the management of default reasons including creation, modification, deletion, batch status updates, and filtering by enable status."
+  },
+  {
+    "id": "TC006",
+    "title": "renewal_application_submission_and_approval",
+    "description": "Verify the submission, approval, and tracking of renewal applications and renewal reasons, ensuring correct workflow and status updates."
+  },
+  {
+    "id": "TC007",
+    "title": "statistics_query_and_report_export",
+    "description": "Test the statistics and analytics module for querying data by industry, region, and trends, and verify the correctness and format of exported reports."
+  },
+  {
+    "id": "TC008",
+    "title": "user_management_role_assignment_and_status_control",
+    "description": "Validate administrative user management functionalities including role assignment, permission control, user status management, and password resets."
+  },
+  {
+    "id": "TC009",
+    "title": "security_notifications_and_event_logging",
+    "description": "Ensure that security notifications, event logging, and access control mechanisms operate correctly to maintain system security."
+  },
+  {
+    "id": "TC010",
+    "title": "api_rate_limiting_and_error_handling",
+    "description": "Verify that the system enforces API rate limiting (up to 100 requests per day per user) and handles errors uniformly with correct HTTP and business status codes."
+  }
+]
