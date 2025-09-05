@@ -21,7 +21,8 @@ import type {
 } from './api-types'
 
 class ApiService {
-  private baseURL = "https://server.kiracoon.top/api/v1"
+  // private baseURL = "https://server.kiracoon.top/api/v1"
+  private baseURL = "http://localhost:3001/api/v1"
 
   private getAuthHeaders() {
     const token = localStorage.getItem("auth_token")
@@ -128,13 +129,35 @@ class ApiService {
     return this.request(`/default-reasons/${id}`)
   }
 
+  async updateDefaultReason(id: number, data: {
+    reason: string
+    detail: string
+    enabled?: boolean
+    sortOrder?: number
+  }) {
+    return this.request(`/default-reasons/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteDefaultReason(id: number) {
+    return this.request(`/default-reasons/${id}`, {
+      method: "DELETE",
+    })
+  }
+
   async getDefaultApplications(params: GetDefaultApplicationsParams = {}): Promise<DefaultApplicationsResponse> {
     const searchParams = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
-      if (value) searchParams.append(key, value.toString())
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.append(key, value.toString())
+      }
     })
-
-    return this.request(`/default-applications?${searchParams}`)
+    
+    const url = `/default-applications${searchParams.toString() ? '?' + searchParams.toString() : ''}`
+    console.log('API请求URL:', url)
+    return this.request(url)
   }
 
   async createDefaultApplication(data: CreateDefaultApplicationData): Promise<DefaultApplication> {

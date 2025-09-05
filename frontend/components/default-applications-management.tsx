@@ -55,7 +55,7 @@ export function DefaultApplicationsManagement() {
   })
   const [filters, setFilters] = useState({
     customerName: "",
-    status: "",
+    status: "all",
     startTime: "",
     endTime: "",
   })
@@ -87,16 +87,19 @@ export function DefaultApplicationsManagement() {
 
     setLoading(true)
     try {
-      const response = await apiService.getDefaultApplications({
+      const params = {
         page: pagination.page,
         size: pagination.size,
         customerName: filters.customerName || undefined,
-        status: (filters.status as "PENDING" | "APPROVED" | "REJECTED") || undefined,
+        status: filters.status !== "all" ? (filters.status as "PENDING" | "APPROVED" | "REJECTED") : undefined,
         startTime: filters.startTime || undefined,
         endTime: filters.endTime || undefined,
         // OPERATOR只能查看自己的申请
         ...(user?.role === "OPERATOR" && { applicant: user.realName }),
-      })
+      }
+      
+      console.log('发送筛选参数:', params)
+      const response = await apiService.getDefaultApplications(params)
 
       // 前端再次过滤，确保权限安全
       let filteredApplications = response.list || []
@@ -106,6 +109,8 @@ export function DefaultApplicationsManagement() {
         )
       }
 
+      console.log('收到响应数据:', response)
+      console.log('过滤后数据:', filteredApplications)
       setApplications(filteredApplications)
       setPagination((prev) => ({
         ...prev,
@@ -134,7 +139,7 @@ export function DefaultApplicationsManagement() {
 
   useEffect(() => {
     loadApplications()
-  }, [pagination.page, pagination.size])
+  }, [pagination.page, pagination.size, filters.customerName, filters.status, filters.startTime, filters.endTime])
 
   useEffect(() => {
     loadDefaultReasons()
@@ -142,6 +147,7 @@ export function DefaultApplicationsManagement() {
 
   // Handle search
   const handleSearch = () => {
+    console.log('手动搜索触发，当前筛选条件:', filters)
     setPagination((prev) => ({ ...prev, page: 1 }))
     loadApplications()
   }
@@ -410,20 +416,26 @@ export function DefaultApplicationsManagement() {
                     className="bg-white"
                     placeholder="搜索客户名称..."
                     value={filters.customerName}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, customerName: e.target.value }))}
+                    onChange={(e) => {
+                      setFilters((prev) => ({ ...prev, customerName: e.target.value }))
+                      setPagination((prev) => ({ ...prev, page: 1 }))
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status-filter">审核状态</Label>
                   <Select
                     value={filters.status}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+                    onValueChange={(value) => {
+                      setFilters((prev) => ({ ...prev, status: value }))
+                      setPagination((prev) => ({ ...prev, page: 1 }))
+                    }}
                   >
                     <SelectTrigger className="bg-white">
                       <SelectValue placeholder="全部状态"  />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={null}>全部状态</SelectItem>
+                      <SelectItem value="all">全部状态</SelectItem>
                       <SelectItem value="PENDING">待审核</SelectItem>
                       <SelectItem value="APPROVED">已通过</SelectItem>
                       <SelectItem value="REJECTED">已拒绝</SelectItem>
@@ -437,7 +449,10 @@ export function DefaultApplicationsManagement() {
                     type="date"
                     className="bg-white"
                     value={filters.startTime}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, startTime: e.target.value }))}
+                    onChange={(e) => {
+                      setFilters((prev) => ({ ...prev, startTime: e.target.value }))
+                      setPagination((prev) => ({ ...prev, page: 1 }))
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -447,7 +462,10 @@ export function DefaultApplicationsManagement() {
                     type="date"
                     value={filters.endTime}
                     className="bg-white"
-                    onChange={(e) => setFilters((prev) => ({ ...prev, endTime: e.target.value }))}
+                    onChange={(e) => {
+                      setFilters((prev) => ({ ...prev, endTime: e.target.value }))
+                      setPagination((prev) => ({ ...prev, page: 1 }))
+                    }}
                   />
                 </div>
               </div>
@@ -460,6 +478,20 @@ export function DefaultApplicationsManagement() {
                   </Button>
                   <Button variant="outline" onClick={loadApplications} disabled={loading}>
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setFilters({
+                        customerName: "",
+                        status: "all",
+                        startTime: "",
+                        endTime: "",
+                      })
+                      setPagination((prev) => ({ ...prev, page: 1 }))
+                    }}
+                  >
+                    重置
                   </Button>
                 </div>
                 {permissions.hasPermission("APPROVE_APPLICATIONS") && (

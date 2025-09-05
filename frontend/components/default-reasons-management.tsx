@@ -89,7 +89,7 @@ export function DefaultReasonsManagement() {
     } catch (error) {
       toast({
         title: "加载失败",
-        description: "无法加载违约原因列表",
+        description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
@@ -117,10 +117,15 @@ export function DefaultReasonsManagement() {
     setLoading(true)
     try {
       if (editingReason) {
+        await apiService.updateDefaultReason(editingReason.id, {
+          reason: formData.reason,
+          detail: formData.detail,
+          enabled: formData.enabled,
+          sortOrder: formData.sortOrder,
+        })
         toast({
-          title: "功能暂不支持",
-          description: "当前API版本不支持更新违约原因",
-          variant: "destructive",
+          title: "更新成功",
+          description: "违约原因已更新",
         })
       } else {
         await apiService.createDefaultReason({
@@ -142,7 +147,7 @@ export function DefaultReasonsManagement() {
     } catch (error) {
       toast({
         title: "操作失败",
-        description: editingReason ? "更新违约原因失败" : "创建违约原因失败",
+        description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
@@ -152,11 +157,23 @@ export function DefaultReasonsManagement() {
 
   // Handle delete
   const handleDelete = async (id: number) => {
-    toast({
-      title: "功能暂不支持",
-      description: "当前API版本不支持删除违约原因",
-      variant: "destructive",
-    })
+    setLoading(true)
+    try {
+      await apiService.deleteDefaultReason(id)
+      toast({
+        title: "删除成功",
+        description: "违约原因已删除",
+      })
+      loadReasons()
+    } catch (error) {
+      toast({
+        title: "删除失败",
+        description: error instanceof Error ? error.message : "未知错误",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Handle edit
@@ -166,7 +183,7 @@ export function DefaultReasonsManagement() {
       reason: reason.reason,
       detail: reason.detail,
       enabled: reason.enabled,
-      sortOrder: 1,
+      sortOrder: reason.sortOrder || 1,
     })
     setIsDialogOpen(true)
   }
@@ -180,13 +197,29 @@ export function DefaultReasonsManagement() {
 
   // Handle status toggle
   const handleStatusToggle = async (reason: DefaultReason) => {
-    toast({
-      title: "功能暂不支持",
-      description: "当前API版本不支持更新违约原因状态",
-      variant: "destructive",
-    })
+    setLoading(true)
+    try {
+      await apiService.updateDefaultReason(reason.id, {
+        reason: reason.reason,
+        detail: reason.detail,
+        enabled: !reason.enabled,
+        sortOrder: reason.sortOrder || 1,
+      })
+      toast({
+        title: "状态更新成功",
+        description: `违约原因已${!reason.enabled ? "启用" : "禁用"}`,
+      })
+      loadReasons()
+    } catch (error) {
+      toast({
+        title: "状态更新失败",
+        description: error instanceof Error ? error.message : "未知错误",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
-  console.log(reasons)
   return (
     <SecureContent permission="VIEW_DEFAULT_REASONS">
       <div className="space-y-6">
@@ -214,7 +247,10 @@ export function DefaultReasonsManagement() {
                 id="name-filter"
                 placeholder="搜索原因名称..."
                 value={filters.reasonName}
-                onChange={(e) => setFilters((prev) => ({ ...prev, reasonName: e.target.value }))}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, reasonName: e.target.value }))
+                  setPagination((prev) => ({ ...prev, page: 1 }))
+                }}
                 className="w-48 bg-white"
               />
             </div>
@@ -283,7 +319,6 @@ export function DefaultReasonsManagement() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  console.log(JSON.stringify(reasons)),
                   reasons.map((reason, index) => (
                     <TableRow key={reason.id}>
                       <TableCell>{(pagination.page - 1) * pagination.size + index + 1}</TableCell>
@@ -296,11 +331,11 @@ export function DefaultReasonsManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {/* <Switch
-                            checked={reason.isEnabled}
+                          <Switch
+                            checked={reason.enabled}
                             onCheckedChange={() => handleStatusToggle(reason)}
-                            size="sm"
-                          /> */}
+                            disabled={loading || !permissions.hasPermission("UPDATE_DEFAULT_REASON")}
+                          />
                           <Badge variant={reason.enabled ? "default" : "destructive"}>
                             {reason.enabled ? "启用" : "禁用"}
                           </Badge>

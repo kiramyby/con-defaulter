@@ -85,7 +85,7 @@ export function StatisticsAnalysis() {
     } catch (error) {
       toast({
         title: "加载失败",
-        description: "统计数据加载失败，请重试",
+        description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {

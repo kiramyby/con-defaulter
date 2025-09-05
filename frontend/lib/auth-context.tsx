@@ -4,6 +4,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ErrorHandler } from "./error-handler"
+import { useToast } from "@/hooks/use-toast"
 
 interface User {
   id: string
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
+  const { toast } = useToast()
 
   const API_BASE_URL = "https://server.kiracoon.top/api/v1"
 
@@ -118,6 +120,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.access_token)
       setUser(data.user)
 
+      toast({
+        title: "登录成功",
+        description: `欢迎回来，${data.user.realName}`,
+      })
+
       router.push("/dashboard")
     } catch (error: any) {
       // 网络错误处理
@@ -180,6 +187,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(null)
       setUser(null)
       setLoading(false)
+
+      toast({
+        title: "已登出",
+        description: "您已成功退出系统",
+      })
 
       router.push("/login")
     }

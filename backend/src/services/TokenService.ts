@@ -91,7 +91,7 @@ class TokenService {
     return {
       accessToken,
       refreshToken,
-      expiresIn: 15 * 60, // 15分钟（秒）
+      expiresIn: 150 * 60, // 150分钟（秒）
       tokenType: 'Bearer',
     };
   }

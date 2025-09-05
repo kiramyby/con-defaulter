@@ -155,7 +155,7 @@ export function RenewalManagement() {
     } catch (error) {
       toast({
         title: "加载失败",
-        description: "无法加载可重生客户列表",
+        description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
@@ -189,7 +189,7 @@ export function RenewalManagement() {
     } catch (error) {
       toast({
         title: "加载失败",
-        description: "无法加载重生申请列表",
+        description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
@@ -281,7 +281,7 @@ export function RenewalManagement() {
     } catch (error: any) {
       toast({
         title: "提交失败",
-        description: error.message || "无法提交重生申请",
+        description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
@@ -318,7 +318,7 @@ export function RenewalManagement() {
       console.error("Failed to submit single approval:", error)
       toast({
         title: "审核失败",
-        description: "无法完成审核操作",
+        description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
@@ -355,7 +355,7 @@ export function RenewalManagement() {
     } catch (error) {
       toast({
         title: "批量审核失败",
-        description: "无法完成批量审核操作",
+        description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
