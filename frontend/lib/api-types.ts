@@ -236,7 +236,7 @@ export interface UpdateUserData {
   email?: string
   phone?: string
   department?: string
-  role?: "ADMIN" | "OPERATOR" | "AUDITOR"
+  role?: "ADMIN" | "OPERATOR" | "AUDITOR" | ""
   status?: "ACTIVE" | "INACTIVE"
 }
 
@@ -245,7 +245,7 @@ export type UsersResponse = PaginatedResponse<User>
 export interface GetUsersParams {
   page?: number
   size?: number
-  role?: "ADMIN" | "OPERATOR" | "AUDITOR"
-  status?: "ACTIVE" | "INACTIVE"
+  role?: "ADMIN" | "OPERATOR" | "AUDITOR" | ""
+  status?: "ACTIVE" | "INACTIVE" | ""
   keyword?: string
 }

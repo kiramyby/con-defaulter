@@ -420,10 +420,10 @@ export function DefaultApplicationsManagement() {
                     onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
                   >
                     <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="选择状态"  />
+                      <SelectValue placeholder="全部状态"  />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">全部状态</SelectItem>
+                      <SelectItem value={null}>全部状态</SelectItem>
                       <SelectItem value="PENDING">待审核</SelectItem>
                       <SelectItem value="APPROVED">已通过</SelectItem>
                       <SelectItem value="REJECTED">已拒绝</SelectItem>

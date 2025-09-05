@@ -60,8 +60,8 @@ export function UserManagement() {
   
   const [filters, setFilters] = useState<GetUsersParams>({
     keyword: "",
-    role: undefined,
-    status: undefined,
+    role: "",
+    status: "",
   })
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -296,7 +296,7 @@ export function UserManagement() {
                     setFilters(prev => ({ ...prev, role: value as any || undefined }))
                   }>
                     <SelectTrigger>
-                      <SelectValue placeholder="选择角色" />
+                      <SelectValue placeholder="全部角色" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={null}>全部角色</SelectItem>
@@ -312,7 +312,7 @@ export function UserManagement() {
                     setFilters(prev => ({ ...prev, status: value as any || undefined }))
                   }>
                     <SelectTrigger>
-                      <SelectValue placeholder="选择状态" />
+                      <SelectValue placeholder="全部状态" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={null}>全部状态</SelectItem>

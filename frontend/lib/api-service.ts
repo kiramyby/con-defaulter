@@ -85,7 +85,7 @@ class ApiService {
       const responseData = await response.json()
       
       // 检查业务状态码
-      if (responseData.code && responseData.code !== 200) {
+      if (responseData.code && (responseData.code !== 200 && responseData.code !== 201)) {
         throw new Error(responseData.message || "请求失败")
       }
       
@@ -235,7 +235,7 @@ class ApiService {
     params: {
       page?: number
       size?: number
-      status?: "PENDING" | "APPROVED" | "REJECTED"
+      status?: "PENDING" | "APPROVED" | "REJECTED" | null
       customerName?: string
       applicant?: string
       startTime?: string
@@ -347,7 +347,7 @@ class ApiService {
   }
 
   async createUser(data: CreateUserData): Promise<User> {
-    return this.request("/users", {
+    return this.request("/auth/register", {
       method: "POST",
       body: JSON.stringify(data),
     })
